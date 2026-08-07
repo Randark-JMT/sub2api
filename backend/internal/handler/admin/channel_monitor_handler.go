@@ -104,12 +104,12 @@ type channelMonitorResponse struct {
 }
 
 type channelMonitorCheckResultResponse struct {
-	Model         string                       `json:"model"`
-	Status        string                       `json:"status"`
-	LatencyMs     *int                         `json:"latency_ms"`
-	PingLatencyMs *int                         `json:"ping_latency_ms"`
-	Message       string                       `json:"message"`
-	CheckedAt     string                       `json:"checked_at"`
+	Model         string                        `json:"model"`
+	Status        string                        `json:"status"`
+	LatencyMs     *int                          `json:"latency_ms"`
+	PingLatencyMs *int                          `json:"ping_latency_ms"`
+	Message       string                        `json:"message"`
+	CheckedAt     string                        `json:"checked_at"`
 	Quota         *service.MonitorQuotaSnapshot `json:"quota,omitempty"`
 }
 

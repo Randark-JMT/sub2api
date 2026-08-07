@@ -10,9 +10,10 @@ import (
 // 校验失败一律返回 channel_monitor_const.go 中预定义的 Err* 错误，错误信息不含具体 IP/hostname，避免泄露内网拓扑。
 
 // validateProvider 校验 provider 字符串。
-// 唯一来源于 providerAdapters：新增 provider 只需要在 channel_monitor_checker.go 注册 adapter。
+// 推理型 provider 来源于 providerAdapters；coding-plan provider（deepseek/glm/kimi）
+// 不走 adapter（不发起推理请求），单独判定。
 func validateProvider(p string) error {
-	if !isSupportedProvider(p) {
+	if !isSupportedProvider(p) && !isCodingPlanProvider(p) {
 		return ErrChannelMonitorInvalidProvider
 	}
 	return nil
