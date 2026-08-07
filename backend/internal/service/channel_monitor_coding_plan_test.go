@@ -96,6 +96,7 @@ func TestRunCodingPlanCheck_DeepseekMultiCurrency(t *testing.T) {
 }
 
 // 空/缺字段的 balance_infos 记录不应产生余额 tier。
+// is_available=false 仅影响快照 Available 徽章，不影响渠道可用性判定（仍是 operational）。
 func TestRunCodingPlanCheck_DeepseekSkipsEmptyBalanceInfo(t *testing.T) {
 	endpoint := codingPlanTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
