@@ -124,12 +124,20 @@ func normalizeModels(in []string) []string {
 	return out
 }
 
-// normalizeMonitorPrimaryModel applies the Grok health-check default while
+// normalizeMonitorPrimaryModel applies provider-specific defaults while
 // preserving the existing required-model behavior for every other provider.
+//   - grok: 默认轻量测活模型
+//   - coding-plan（deepseek/glm/kimi）: 占位名（不发起推理请求）
 func normalizeMonitorPrimaryModel(provider, model string) string {
 	model = strings.TrimSpace(model)
-	if model == "" && provider == MonitorProviderGrok {
+	if model != "" {
+		return model
+	}
+	if provider == MonitorProviderGrok {
 		return MonitorDefaultGrokModel
+	}
+	if isCodingPlanProvider(provider) {
+		return codingPlanDefaultModel(provider)
 	}
 	return model
 }
