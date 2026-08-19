@@ -59,6 +59,8 @@ type Account struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 	// Auto pause scheduling when account expires.
 	AutoPauseOnExpired bool `json:"auto_pause_on_expired,omitempty"`
+	// Opt-in rolling-window usage history tracking (adds upstream usage API calls).
+	WindowTrackingEnabled bool `json:"window_tracking_enabled,omitempty"`
 	// Schedulable holds the value of the "schedulable" field.
 	Schedulable bool `json:"schedulable,omitempty"`
 	// RateLimitedAt holds the value of the "rate_limited_at" field.
@@ -99,11 +101,13 @@ type AccountEdges struct {
 	Children []*Account `json:"children,omitempty"`
 	// UsageLogs holds the value of the usage_logs edge.
 	UsageLogs []*UsageLog `json:"usage_logs,omitempty"`
+	// WindowUsageHistories holds the value of the window_usage_histories edge.
+	WindowUsageHistories []*AccountWindowUsageHistory `json:"window_usage_histories,omitempty"`
 	// AccountGroups holds the value of the account_groups edge.
 	AccountGroups []*AccountGroup `json:"account_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [6]bool
+	loadedTypes [7]bool
 }
 
 // GroupsOrErr returns the Groups value or an error if the edge
@@ -155,10 +159,19 @@ func (e AccountEdges) UsageLogsOrErr() ([]*UsageLog, error) {
 	return nil, &NotLoadedError{edge: "usage_logs"}
 }
 
+// WindowUsageHistoriesOrErr returns the WindowUsageHistories value or an error if the edge
+// was not loaded in eager-loading.
+func (e AccountEdges) WindowUsageHistoriesOrErr() ([]*AccountWindowUsageHistory, error) {
+	if e.loadedTypes[5] {
+		return e.WindowUsageHistories, nil
+	}
+	return nil, &NotLoadedError{edge: "window_usage_histories"}
+}
+
 // AccountGroupsOrErr returns the AccountGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e AccountEdges) AccountGroupsOrErr() ([]*AccountGroup, error) {
-	if e.loadedTypes[5] {
+	if e.loadedTypes[6] {
 		return e.AccountGroups, nil
 	}
 	return nil, &NotLoadedError{edge: "account_groups"}
@@ -171,7 +184,7 @@ func (*Account) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case account.FieldCredentials, account.FieldExtra:
 			values[i] = new([]byte)
-		case account.FieldAutoPauseOnExpired, account.FieldSchedulable:
+		case account.FieldAutoPauseOnExpired, account.FieldWindowTrackingEnabled, account.FieldSchedulable:
 			values[i] = new(sql.NullBool)
 		case account.FieldRateMultiplier:
 			values[i] = new(sql.NullFloat64)
@@ -334,6 +347,12 @@ func (_m *Account) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.AutoPauseOnExpired = value.Bool
 			}
+		case account.FieldWindowTrackingEnabled:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field window_tracking_enabled", values[i])
+			} else if value.Valid {
+				_m.WindowTrackingEnabled = value.Bool
+			}
 		case account.FieldSchedulable:
 			if value, ok := values[i].(*sql.NullBool); !ok {
 				return fmt.Errorf("unexpected type %T for field schedulable", values[i])
@@ -447,6 +466,11 @@ func (_m *Account) QueryUsageLogs() *UsageLogQuery {
 	return NewAccountClient(_m.config).QueryUsageLogs(_m)
 }
 
+// QueryWindowUsageHistories queries the "window_usage_histories" edge of the Account entity.
+func (_m *Account) QueryWindowUsageHistories() *AccountWindowUsageHistoryQuery {
+	return NewAccountClient(_m.config).QueryWindowUsageHistories(_m)
+}
+
 // QueryAccountGroups queries the "account_groups" edge of the Account entity.
 func (_m *Account) QueryAccountGroups() *AccountGroupQuery {
 	return NewAccountClient(_m.config).QueryAccountGroups(_m)
@@ -550,6 +574,9 @@ func (_m *Account) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("auto_pause_on_expired=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AutoPauseOnExpired))
+	builder.WriteString(", ")
+	builder.WriteString("window_tracking_enabled=")
+	builder.WriteString(fmt.Sprintf("%v", _m.WindowTrackingEnabled))
 	builder.WriteString(", ")
 	builder.WriteString("schedulable=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Schedulable))

@@ -115,6 +115,7 @@ var (
 		{Name: "last_used_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "auto_pause_on_expired", Type: field.TypeBool, Default: true},
+		{Name: "window_tracking_enabled", Type: field.TypeBool, Default: false},
 		{Name: "schedulable", Type: field.TypeBool, Default: true},
 		{Name: "rate_limited_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "rate_limit_reset_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -136,13 +137,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "accounts_proxies_proxy",
-				Columns:    []*schema.Column{AccountsColumns[30]},
+				Columns:    []*schema.Column{AccountsColumns[31]},
 				RefColumns: []*schema.Column{ProxiesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "accounts_accounts_children",
-				Columns:    []*schema.Column{AccountsColumns[31]},
+				Columns:    []*schema.Column{AccountsColumns[32]},
 				RefColumns: []*schema.Column{AccountsColumns[0]},
 				OnDelete:   schema.Restrict,
 			},
@@ -166,7 +167,7 @@ var (
 			{
 				Name:    "account_proxy_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[30]},
+				Columns: []*schema.Column{AccountsColumns[31]},
 			},
 			{
 				Name:    "account_priority",
@@ -181,22 +182,22 @@ var (
 			{
 				Name:    "account_schedulable",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[20]},
+				Columns: []*schema.Column{AccountsColumns[21]},
 			},
 			{
 				Name:    "account_rate_limited_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[21]},
+				Columns: []*schema.Column{AccountsColumns[22]},
 			},
 			{
 				Name:    "account_rate_limit_reset_at",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[22]},
+				Columns: []*schema.Column{AccountsColumns[23]},
 			},
 			{
 				Name:    "account_overload_until",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[23]},
+				Columns: []*schema.Column{AccountsColumns[24]},
 			},
 			{
 				Name:    "account_platform_priority",
@@ -216,7 +217,7 @@ var (
 			{
 				Name:    "account_parent_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{AccountsColumns[31]},
+				Columns: []*schema.Column{AccountsColumns[32]},
 			},
 		},
 	}
@@ -256,6 +257,67 @@ var (
 				Name:    "accountgroup_priority",
 				Unique:  false,
 				Columns: []*schema.Column{AccountGroupsColumns[0]},
+			},
+		},
+	}
+	// AccountWindowUsageHistoriesColumns holds the columns for the "account_window_usage_histories" table.
+	AccountWindowUsageHistoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "window_type", Type: field.TypeString, Size: 32},
+		{Name: "window_start", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "window_end", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "peak_used_percent", Type: field.TypeFloat64, Default: 0},
+		{Name: "last_used_percent", Type: field.TypeFloat64, Default: 0},
+		{Name: "used_absolute", Type: field.TypeFloat64, Nullable: true},
+		{Name: "limit_absolute", Type: field.TypeFloat64, Nullable: true},
+		{Name: "sample_count", Type: field.TypeInt, Default: 0},
+		{Name: "decisive_probe_count", Type: field.TypeInt, Default: 0},
+		{Name: "last_probe_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "requests", Type: field.TypeInt64, Nullable: true},
+		{Name: "tokens_total", Type: field.TypeInt64, Nullable: true},
+		{Name: "tokens_input", Type: field.TypeInt64, Nullable: true},
+		{Name: "tokens_output", Type: field.TypeInt64, Nullable: true},
+		{Name: "tokens_cache_creation", Type: field.TypeInt64, Nullable: true},
+		{Name: "tokens_cache_read", Type: field.TypeInt64, Nullable: true},
+		{Name: "finalized_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "account_id", Type: field.TypeInt64},
+	}
+	// AccountWindowUsageHistoriesTable holds the schema information for the "account_window_usage_histories" table.
+	AccountWindowUsageHistoriesTable = &schema.Table{
+		Name:       "account_window_usage_histories",
+		Columns:    AccountWindowUsageHistoriesColumns,
+		PrimaryKey: []*schema.Column{AccountWindowUsageHistoriesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "account_window_usage_histories_accounts_window_usage_histories",
+				Columns:    []*schema.Column{AccountWindowUsageHistoriesColumns[20]},
+				RefColumns: []*schema.Column{AccountsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "accountwindowusagehistory_account_id_window_type",
+				Unique:  true,
+				Columns: []*schema.Column{AccountWindowUsageHistoriesColumns[20], AccountWindowUsageHistoriesColumns[3]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "finalized_at IS NULL",
+				},
+			},
+			{
+				Name:    "accountwindowusagehistory_account_id_window_type_window_end",
+				Unique:  false,
+				Columns: []*schema.Column{AccountWindowUsageHistoriesColumns[20], AccountWindowUsageHistoriesColumns[3], AccountWindowUsageHistoriesColumns[5]},
+			},
+			{
+				Name:    "accountwindowusagehistory_window_end",
+				Unique:  false,
+				Columns: []*schema.Column{AccountWindowUsageHistoriesColumns[5]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "finalized_at IS NULL",
+				},
 			},
 		},
 	}
@@ -2086,6 +2148,7 @@ var (
 		APIKeysTable,
 		AccountsTable,
 		AccountGroupsTable,
+		AccountWindowUsageHistoriesTable,
 		AnnouncementsTable,
 		AnnouncementReadsTable,
 		AuthIdentitiesTable,
@@ -2140,6 +2203,10 @@ func init() {
 	AccountGroupsTable.ForeignKeys[1].RefTable = GroupsTable
 	AccountGroupsTable.Annotation = &entsql.Annotation{
 		Table: "account_groups",
+	}
+	AccountWindowUsageHistoriesTable.ForeignKeys[0].RefTable = AccountsTable
+	AccountWindowUsageHistoriesTable.Annotation = &entsql.Annotation{
+		Table: "account_window_usage_histories",
 	}
 	AnnouncementsTable.Annotation = &entsql.Annotation{
 		Table: "announcements",

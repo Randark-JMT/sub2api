@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/account"
+	"github.com/Wei-Shaw/sub2api/ent/accountwindowusagehistory"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/proxy"
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
@@ -265,6 +266,20 @@ func (_c *AccountCreate) SetNillableAutoPauseOnExpired(v *bool) *AccountCreate {
 	return _c
 }
 
+// SetWindowTrackingEnabled sets the "window_tracking_enabled" field.
+func (_c *AccountCreate) SetWindowTrackingEnabled(v bool) *AccountCreate {
+	_c.mutation.SetWindowTrackingEnabled(v)
+	return _c
+}
+
+// SetNillableWindowTrackingEnabled sets the "window_tracking_enabled" field if the given value is not nil.
+func (_c *AccountCreate) SetNillableWindowTrackingEnabled(v *bool) *AccountCreate {
+	if v != nil {
+		_c.SetWindowTrackingEnabled(*v)
+	}
+	return _c
+}
+
 // SetSchedulable sets the "schedulable" field.
 func (_c *AccountCreate) SetSchedulable(v bool) *AccountCreate {
 	_c.mutation.SetSchedulable(v)
@@ -488,6 +503,21 @@ func (_c *AccountCreate) AddUsageLogs(v ...*UsageLog) *AccountCreate {
 	return _c.AddUsageLogIDs(ids...)
 }
 
+// AddWindowUsageHistoryIDs adds the "window_usage_histories" edge to the AccountWindowUsageHistory entity by IDs.
+func (_c *AccountCreate) AddWindowUsageHistoryIDs(ids ...int64) *AccountCreate {
+	_c.mutation.AddWindowUsageHistoryIDs(ids...)
+	return _c
+}
+
+// AddWindowUsageHistories adds the "window_usage_histories" edges to the AccountWindowUsageHistory entity.
+func (_c *AccountCreate) AddWindowUsageHistories(v ...*AccountWindowUsageHistory) *AccountCreate {
+	ids := make([]int64, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddWindowUsageHistoryIDs(ids...)
+}
+
 // Mutation returns the AccountMutation object of the builder.
 func (_c *AccountCreate) Mutation() *AccountMutation {
 	return _c.mutation
@@ -573,6 +603,10 @@ func (_c *AccountCreate) defaults() error {
 		v := account.DefaultAutoPauseOnExpired
 		_c.mutation.SetAutoPauseOnExpired(v)
 	}
+	if _, ok := _c.mutation.WindowTrackingEnabled(); !ok {
+		v := account.DefaultWindowTrackingEnabled
+		_c.mutation.SetWindowTrackingEnabled(v)
+	}
 	if _, ok := _c.mutation.Schedulable(); !ok {
 		v := account.DefaultSchedulable
 		_c.mutation.SetSchedulable(v)
@@ -641,6 +675,9 @@ func (_c *AccountCreate) check() error {
 	}
 	if _, ok := _c.mutation.AutoPauseOnExpired(); !ok {
 		return &ValidationError{Name: "auto_pause_on_expired", err: errors.New(`ent: missing required field "Account.auto_pause_on_expired"`)}
+	}
+	if _, ok := _c.mutation.WindowTrackingEnabled(); !ok {
+		return &ValidationError{Name: "window_tracking_enabled", err: errors.New(`ent: missing required field "Account.window_tracking_enabled"`)}
 	}
 	if _, ok := _c.mutation.Schedulable(); !ok {
 		return &ValidationError{Name: "schedulable", err: errors.New(`ent: missing required field "Account.schedulable"`)}
@@ -761,6 +798,10 @@ func (_c *AccountCreate) createSpec() (*Account, *sqlgraph.CreateSpec) {
 		_spec.SetField(account.FieldAutoPauseOnExpired, field.TypeBool, value)
 		_node.AutoPauseOnExpired = value
 	}
+	if value, ok := _c.mutation.WindowTrackingEnabled(); ok {
+		_spec.SetField(account.FieldWindowTrackingEnabled, field.TypeBool, value)
+		_node.WindowTrackingEnabled = value
+	}
 	if value, ok := _c.mutation.Schedulable(); ok {
 		_spec.SetField(account.FieldSchedulable, field.TypeBool, value)
 		_node.Schedulable = value
@@ -880,6 +921,22 @@ func (_c *AccountCreate) createSpec() (*Account, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.WindowUsageHistoriesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.WindowUsageHistoriesTable,
+			Columns: []string{account.WindowUsageHistoriesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(accountwindowusagehistory.FieldID, field.TypeInt64),
 			},
 		}
 		for _, k := range nodes {
@@ -1242,6 +1299,18 @@ func (u *AccountUpsert) SetAutoPauseOnExpired(v bool) *AccountUpsert {
 // UpdateAutoPauseOnExpired sets the "auto_pause_on_expired" field to the value that was provided on create.
 func (u *AccountUpsert) UpdateAutoPauseOnExpired() *AccountUpsert {
 	u.SetExcluded(account.FieldAutoPauseOnExpired)
+	return u
+}
+
+// SetWindowTrackingEnabled sets the "window_tracking_enabled" field.
+func (u *AccountUpsert) SetWindowTrackingEnabled(v bool) *AccountUpsert {
+	u.Set(account.FieldWindowTrackingEnabled, v)
+	return u
+}
+
+// UpdateWindowTrackingEnabled sets the "window_tracking_enabled" field to the value that was provided on create.
+func (u *AccountUpsert) UpdateWindowTrackingEnabled() *AccountUpsert {
+	u.SetExcluded(account.FieldWindowTrackingEnabled)
 	return u
 }
 
@@ -1830,6 +1899,20 @@ func (u *AccountUpsertOne) SetAutoPauseOnExpired(v bool) *AccountUpsertOne {
 func (u *AccountUpsertOne) UpdateAutoPauseOnExpired() *AccountUpsertOne {
 	return u.Update(func(s *AccountUpsert) {
 		s.UpdateAutoPauseOnExpired()
+	})
+}
+
+// SetWindowTrackingEnabled sets the "window_tracking_enabled" field.
+func (u *AccountUpsertOne) SetWindowTrackingEnabled(v bool) *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.SetWindowTrackingEnabled(v)
+	})
+}
+
+// UpdateWindowTrackingEnabled sets the "window_tracking_enabled" field to the value that was provided on create.
+func (u *AccountUpsertOne) UpdateWindowTrackingEnabled() *AccountUpsertOne {
+	return u.Update(func(s *AccountUpsert) {
+		s.UpdateWindowTrackingEnabled()
 	})
 }
 
@@ -2615,6 +2698,20 @@ func (u *AccountUpsertBulk) SetAutoPauseOnExpired(v bool) *AccountUpsertBulk {
 func (u *AccountUpsertBulk) UpdateAutoPauseOnExpired() *AccountUpsertBulk {
 	return u.Update(func(s *AccountUpsert) {
 		s.UpdateAutoPauseOnExpired()
+	})
+}
+
+// SetWindowTrackingEnabled sets the "window_tracking_enabled" field.
+func (u *AccountUpsertBulk) SetWindowTrackingEnabled(v bool) *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.SetWindowTrackingEnabled(v)
+	})
+}
+
+// UpdateWindowTrackingEnabled sets the "window_tracking_enabled" field to the value that was provided on create.
+func (u *AccountUpsertBulk) UpdateWindowTrackingEnabled() *AccountUpsertBulk {
+	return u.Update(func(s *AccountUpsert) {
+		s.UpdateWindowTrackingEnabled()
 	})
 }
 

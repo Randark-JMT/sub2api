@@ -140,6 +140,12 @@ func (Account) Fields() []ent.Field {
 			Default(true).
 			Comment("Auto pause scheduling when account expires."),
 
+		// window_tracking_enabled: opt-in 滚动窗口用量历史记录
+		// （会增加上游用量 API 调用，见 AccountWindowUsageRecorder）
+		field.Bool("window_tracking_enabled").
+			Default(false).
+			Comment("Opt-in rolling-window usage history tracking (adds upstream usage API calls)."),
+
 		// ========== 调度和速率限制相关字段 ==========
 		// 这些字段在 migrations/005_schema_parity.sql 中添加
 
@@ -227,6 +233,8 @@ func (Account) Edges() []ent.Edge {
 			Unique(),
 		// usage_logs: 该账户的使用日志
 		edge.To("usage_logs", UsageLog.Type),
+		// window_usage_histories: 滚动窗口用量历史（opt-in 追踪）
+		edge.To("window_usage_histories", AccountWindowUsageHistory.Type),
 	}
 }
 

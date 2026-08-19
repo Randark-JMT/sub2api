@@ -145,6 +145,11 @@ func AutoPauseOnExpired(v bool) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldAutoPauseOnExpired, v))
 }
 
+// WindowTrackingEnabled applies equality check predicate on the "window_tracking_enabled" field. It's identical to WindowTrackingEnabledEQ.
+func WindowTrackingEnabled(v bool) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldWindowTrackingEnabled, v))
+}
+
 // Schedulable applies equality check predicate on the "schedulable" field. It's identical to SchedulableEQ.
 func Schedulable(v bool) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldSchedulable, v))
@@ -1095,6 +1100,16 @@ func AutoPauseOnExpiredNEQ(v bool) predicate.Account {
 	return predicate.Account(sql.FieldNEQ(FieldAutoPauseOnExpired, v))
 }
 
+// WindowTrackingEnabledEQ applies the EQ predicate on the "window_tracking_enabled" field.
+func WindowTrackingEnabledEQ(v bool) predicate.Account {
+	return predicate.Account(sql.FieldEQ(FieldWindowTrackingEnabled, v))
+}
+
+// WindowTrackingEnabledNEQ applies the NEQ predicate on the "window_tracking_enabled" field.
+func WindowTrackingEnabledNEQ(v bool) predicate.Account {
+	return predicate.Account(sql.FieldNEQ(FieldWindowTrackingEnabled, v))
+}
+
 // SchedulableEQ applies the EQ predicate on the "schedulable" field.
 func SchedulableEQ(v bool) predicate.Account {
 	return predicate.Account(sql.FieldEQ(FieldSchedulable, v))
@@ -1712,6 +1727,29 @@ func HasUsageLogs() predicate.Account {
 func HasUsageLogsWith(preds ...predicate.UsageLog) predicate.Account {
 	return predicate.Account(func(s *sql.Selector) {
 		step := newUsageLogsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasWindowUsageHistories applies the HasEdge predicate on the "window_usage_histories" edge.
+func HasWindowUsageHistories() predicate.Account {
+	return predicate.Account(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, WindowUsageHistoriesTable, WindowUsageHistoriesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasWindowUsageHistoriesWith applies the HasEdge predicate on the "window_usage_histories" edge with a given conditions (other predicates).
+func HasWindowUsageHistoriesWith(preds ...predicate.AccountWindowUsageHistory) predicate.Account {
+	return predicate.Account(func(s *sql.Selector) {
+		step := newWindowUsageHistoriesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

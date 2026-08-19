@@ -56,6 +56,8 @@ const (
 	FieldExpiresAt = "expires_at"
 	// FieldAutoPauseOnExpired holds the string denoting the auto_pause_on_expired field in the database.
 	FieldAutoPauseOnExpired = "auto_pause_on_expired"
+	// FieldWindowTrackingEnabled holds the string denoting the window_tracking_enabled field in the database.
+	FieldWindowTrackingEnabled = "window_tracking_enabled"
 	// FieldSchedulable holds the string denoting the schedulable field in the database.
 	FieldSchedulable = "schedulable"
 	// FieldRateLimitedAt holds the string denoting the rate_limited_at field in the database.
@@ -88,6 +90,8 @@ const (
 	EdgeChildren = "children"
 	// EdgeUsageLogs holds the string denoting the usage_logs edge name in mutations.
 	EdgeUsageLogs = "usage_logs"
+	// EdgeWindowUsageHistories holds the string denoting the window_usage_histories edge name in mutations.
+	EdgeWindowUsageHistories = "window_usage_histories"
 	// EdgeAccountGroups holds the string denoting the account_groups edge name in mutations.
 	EdgeAccountGroups = "account_groups"
 	// Table holds the table name of the account in the database.
@@ -119,6 +123,13 @@ const (
 	UsageLogsInverseTable = "usage_logs"
 	// UsageLogsColumn is the table column denoting the usage_logs relation/edge.
 	UsageLogsColumn = "account_id"
+	// WindowUsageHistoriesTable is the table that holds the window_usage_histories relation/edge.
+	WindowUsageHistoriesTable = "account_window_usage_histories"
+	// WindowUsageHistoriesInverseTable is the table name for the AccountWindowUsageHistory entity.
+	// It exists in this package in order to avoid circular dependency with the "accountwindowusagehistory" package.
+	WindowUsageHistoriesInverseTable = "account_window_usage_histories"
+	// WindowUsageHistoriesColumn is the table column denoting the window_usage_histories relation/edge.
+	WindowUsageHistoriesColumn = "account_id"
 	// AccountGroupsTable is the table that holds the account_groups relation/edge.
 	AccountGroupsTable = "account_groups"
 	// AccountGroupsInverseTable is the table name for the AccountGroup entity.
@@ -151,6 +162,7 @@ var Columns = []string{
 	FieldLastUsedAt,
 	FieldExpiresAt,
 	FieldAutoPauseOnExpired,
+	FieldWindowTrackingEnabled,
 	FieldSchedulable,
 	FieldRateLimitedAt,
 	FieldRateLimitResetAt,
@@ -216,6 +228,8 @@ var (
 	StatusValidator func(string) error
 	// DefaultAutoPauseOnExpired holds the default value on creation for the "auto_pause_on_expired" field.
 	DefaultAutoPauseOnExpired bool
+	// DefaultWindowTrackingEnabled holds the default value on creation for the "window_tracking_enabled" field.
+	DefaultWindowTrackingEnabled bool
 	// DefaultSchedulable holds the default value on creation for the "schedulable" field.
 	DefaultSchedulable bool
 	// SessionWindowStatusValidator is a validator for the "session_window_status" field. It is called by the builders before save.
@@ -346,6 +360,11 @@ func ByAutoPauseOnExpired(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAutoPauseOnExpired, opts...).ToFunc()
 }
 
+// ByWindowTrackingEnabled orders the results by the window_tracking_enabled field.
+func ByWindowTrackingEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWindowTrackingEnabled, opts...).ToFunc()
+}
+
 // BySchedulable orders the results by the schedulable field.
 func BySchedulable(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSchedulable, opts...).ToFunc()
@@ -457,6 +476,20 @@ func ByUsageLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByWindowUsageHistoriesCount orders the results by window_usage_histories count.
+func ByWindowUsageHistoriesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newWindowUsageHistoriesStep(), opts...)
+	}
+}
+
+// ByWindowUsageHistories orders the results by window_usage_histories terms.
+func ByWindowUsageHistories(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newWindowUsageHistoriesStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByAccountGroupsCount orders the results by account_groups count.
 func ByAccountGroupsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -503,6 +536,13 @@ func newUsageLogsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UsageLogsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, UsageLogsTable, UsageLogsColumn),
+	)
+}
+func newWindowUsageHistoriesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(WindowUsageHistoriesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, WindowUsageHistoriesTable, WindowUsageHistoriesColumn),
 	)
 }
 func newAccountGroupsStep() *sqlgraph.Step {
