@@ -809,6 +809,10 @@ export default {
       },
       autoPauseOnExpired: 'Auto Pause On Expired',
       autoPauseOnExpiredDesc: 'When enabled, the account will auto pause scheduling after it expires',
+      windowTracking: {
+        title: 'Rolling-Window Usage Tracking',
+        desc: 'Periodically probes rolling-window usage (5h / 7d etc.) and captures the final usage right before each window resets; this increases upstream usage API call frequency.'
+      },
 	  autoPause5hThreshold: '5h Usage Threshold (%)',
 	  autoPause7dThreshold: '7d Usage Threshold (%)',
 	  autoPauseThresholdHint: 'Leave empty or set 0 to use the global default threshold (configured in Ops settings); set a value to override the global default. Reaching the threshold only skips the account during scheduling and does not modify schedulable.',
@@ -1455,7 +1459,28 @@ export default {
         todayTokens: 'Today Tokens',
         todayCost: 'Today Cost',
         usageTrend: '30-Day Cost & Request Trend',
-        noData: 'No usage data available for this account'
+        noData: 'No usage data available for this account',
+        windowHistory: {
+          title: 'Rolling-Window Usage History',
+          subtitle: 'Per-window token usage vs utilization; a declining implied limit signals quota shrinkage',
+          optInTitle: 'Window usage tracking is not enabled',
+          optInDesc:
+            'Once enabled, the system periodically probes rolling-window usage and captures the final usage right before each window resets (this increases upstream usage API calls). Window-by-window history then shows up here.',
+          empty: 'No window usage data yet',
+          openBadge: 'In progress',
+          impliedLimitHint: 'Implied limit = window tokens ÷ final utilization',
+          chartTokens: 'Window Tokens',
+          chartPeak: 'Peak Utilization',
+          chartFinal: 'Final Utilization',
+          chartImplied: 'Implied Limit',
+          tableWindow: 'Window',
+          tableRequests: 'Requests',
+          tableTokens: 'Tokens',
+          tablePeak: 'Peak',
+          tableFinal: 'Final',
+          tableImplied: 'Implied Limit',
+          tableSamples: 'Samples'
+        }
       },
       usageWindow: {
         statsTitle: '5-Hour Window Usage Statistics',

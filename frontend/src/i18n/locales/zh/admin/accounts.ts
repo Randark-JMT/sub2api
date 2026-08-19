@@ -873,6 +873,10 @@ export default {
       },
       autoPauseOnExpired: '过期自动暂停调度',
       autoPauseOnExpiredDesc: '启用后，账号过期将自动暂停调度',
+      windowTracking: {
+        title: '滚动窗口用量追踪',
+        desc: '启用后系统会定时探测该账号各滚动窗口（5h / 7d 等）的用量，并在窗口重置前做最终探测记录；这会增加上游用量 API 的调用频率。'
+      },
 	  autoPause5hThreshold: '5h 用量阈值(%)',
 	  autoPause7dThreshold: '7d 用量阈值(%)',
 	  autoPauseThresholdHint: '留空或填 0 表示使用全局默认阈值（在运维设置中配置）；填具体值则覆盖全局默认。达到阈值后仅在调度时跳过账号，不修改 schedulable。',
@@ -1505,7 +1509,28 @@ export default {
         todayTokens: '今日 Token',
         todayCost: '今日费用',
         usageTrend: '30天费用与请求趋势',
-        noData: '该账号暂无使用数据'
+        noData: '该账号暂无使用数据',
+        windowHistory: {
+          title: '滚动窗口用量历史',
+          subtitle: '窗口内 Token 用量与使用率；推算限额随时间下降即为限额缩水信号',
+          optInTitle: '未启用窗口用量追踪',
+          optInDesc:
+            '开启后系统会定时探测各滚动窗口用量并在窗口重置前记录最终用量（会增加上游用量 API 调用），随后可在此查看每个窗口的历史用量与限额变化。',
+          empty: '暂无窗口用量数据',
+          openBadge: '进行中',
+          impliedLimitHint: '推算限额 = 窗口 Token ÷ 最终使用率',
+          chartTokens: '窗口 Token',
+          chartPeak: '峰值使用率',
+          chartFinal: '最终使用率',
+          chartImplied: '推算限额',
+          tableWindow: '窗口',
+          tableRequests: '请求',
+          tableTokens: 'Token 用量',
+          tablePeak: '峰值',
+          tableFinal: '最终',
+          tableImplied: '推算限额',
+          tableSamples: '采样'
+        }
       }
     },
 
