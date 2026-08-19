@@ -335,8 +335,10 @@ func TestGetAccountWindowStatsRange_AggregatesOnlyWithinBounds(t *testing.T) {
 	account := mustCreateWindowAccount(t, client, false)
 	repo := newUsageLogRepositoryWithSQL(client, integrationDB)
 
-	windowStart := time.Now().Add(-5 * time.Hour).UTC().Truncate(time.Second)
-	windowEnd := time.Now().UTC().Truncate(time.Second)
+	// 用固定的过去日期（同 TestGetUserStats 先例）：近 now 的播种会污染同套件
+	// dashboard 断言（今日活跃用户/近期小时桶的绝对计数）
+	windowStart := time.Date(2025, 2, 20, 6, 0, 0, 0, time.UTC)
+	windowEnd := windowStart.Add(5 * time.Hour)
 
 	// 窗口内 3 条
 	mustSeedUsageLog(t, client, account.ID, windowStart.Add(10*time.Minute), 100, 50, 10, 5)
