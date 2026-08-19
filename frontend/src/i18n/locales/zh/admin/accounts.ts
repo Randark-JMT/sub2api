@@ -875,7 +875,7 @@ export default {
       autoPauseOnExpiredDesc: '启用后，账号过期将自动暂停调度',
       windowTracking: {
         title: '滚动窗口用量追踪',
-        desc: '启用后系统会定时探测该账号各滚动窗口（5h / 7d 等）的用量，并在窗口重置前做最终探测记录；这会增加上游用量 API 的调用频率。'
+        desc: '启用后系统会定时探测该账号各滚动窗口（5h / 7d 等）的用量，并在窗口重置前做最终探测记录；仅适用于 Anthropic 与国产 coding plan 账号，会增加上游用量 API 的调用频率。'
       },
 	  autoPause5hThreshold: '5h 用量阈值(%)',
 	  autoPause7dThreshold: '7d 用量阈值(%)',

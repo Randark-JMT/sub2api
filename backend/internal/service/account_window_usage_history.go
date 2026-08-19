@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
 )
 
 // 账号滚动窗口用量历史（opt-in，accounts.window_tracking_enabled 启用）。
 //
 // 数据分两块：
-//   - 窗口限额（使用率/绝对用量/限额/重置时间）：由 AccountWindowUsageRecorder
+//   - 窗口限额（使用率/重置时间）：由 AccountWindowUsageRecorder
 //     复用渠道监控的配额抓取链路（ChannelMonitorQuotaFetcher）定时探测，
 //     并在窗口重置前做决断性 force 探测，捕获窗口最终用量
 //   - token 明细：窗口关闭后由 usage_logs 在 [window_start, window_end) 内
@@ -47,6 +48,57 @@ func recordedWindow(windowType string) bool {
 	return ok
 }
 
+// DecisiveBudgetSlideWindow 决断预算的重置阈值：window_end 前移超过该值才视为
+// 新窗口实例并重置认领预算；秒级 reset 抖动不重置，避免亚分钟滑动反复补充
+// 探测预算（repo upsert 以 SQL 参数消费该常量）。
+const DecisiveBudgetSlideWindow = 60 * time.Second
+
+// WindowTrackable 判断账号平台是否适用窗口追踪。
+//
+// 只有具备「只读用量 API」的平台才能被主动探测：
+//   - anthropic：console usage API，纯查询不消耗账号配额
+//   - kimi/zhipu/deepseek coding plan：配额端点，纯查询
+//
+// OpenAI（Codex）的用量只能经真实推理请求的响应头推导，主动探测既消耗账号
+// 自身配额、又污染测量对象（探针请求计入上游 used% 但不产生本地 usage_log，
+// 推算限额 = 本地 token ÷ 上游 used% 会被系统性低估）；Gemini/Grok 只有 daily
+// 窗口、Antigravity 只有 total、CN payg 只有余额端点——均产不出滚动窗口数据。
+func WindowTrackable(account *Account) bool {
+	if account == nil {
+		return false
+	}
+	switch account.Platform {
+	case domain.PlatformAnthropic:
+		return true
+	case domain.PlatformKimi, domain.PlatformZhipu, domain.PlatformDeepseek:
+		return account.IsCodingPlan()
+	default:
+		return false
+	}
+}
+
+// TrackablePlatformSQLArgs 平台门控 SQL 的参数（与 ListWindowTrackingEnabled
+// 的占位符一一对应；coding plan 存于 credentials["account_mode"]，明文 JSONB）。
+func TrackablePlatformSQLArgs() []any {
+	return []any{
+		domain.PlatformAnthropic,
+		domain.PlatformKimi, domain.PlatformZhipu, domain.PlatformDeepseek,
+		domain.AccountModeCoding,
+	}
+}
+
+// ValidateWindowTrackingEnable 校验窗口追踪开关变更的平台适用性。
+//
+// 只拒绝「在不适用平台上新开启」：历史遗留的 true（旧版本写入/直改库）原样
+// 再提交不报错——SQL 选取层已排除不适用平台，遗留 true 是惰性值，不能让它
+// 卡住该账号的其他字段编辑。返回的 error 直接面向管理端 API。
+func ValidateWindowTrackingEnable(account *Account, current, next bool) error {
+	if account == nil || !next || next == current || WindowTrackable(account) {
+		return nil
+	}
+	return fmt.Errorf("window_tracking_enabled 仅适用于 Anthropic 与国产 coding plan 账号，平台 %s 不支持", account.Platform)
+}
+
 // AccountWindowUsageRecord 单个滚动窗口的用量历史记录（一行）。
 //
 // finalized_at 为空表示「开放行」：当前窗口仍在滑动/使用中，quota 字段随采样
@@ -61,10 +113,7 @@ type AccountWindowUsageRecord struct {
 	// Peak/LastUsedPercent 窗口内峰值/最新使用率（0-100+，不截断）
 	PeakUsedPercent float64 `json:"peak_used_percent"`
 	LastUsedPercent float64 `json:"last_used_percent"`
-	// Used/LimitAbsolute 供应商上报的绝对用量/限额（如 Codex），仅上报时非空
-	UsedAbsolute  *float64 `json:"used_absolute"`
-	LimitAbsolute *float64 `json:"limit_absolute"`
-	SampleCount   int      `json:"sample_count"`
+	SampleCount     int     `json:"sample_count"`
 	// DecisiveProbeCount/LastProbeAt 决断探测认领守卫（次数上限 + 最小间隔）
 	DecisiveProbeCount int        `json:"decisive_probe_count"`
 	LastProbeAt        *time.Time `json:"last_probe_at"`
@@ -129,8 +178,6 @@ type AccountWindowUsageEntry struct {
 	TokensCacheRead     *int64    `json:"tokens_cache_read"`
 	PeakUsedPercent     float64   `json:"peak_used_percent"`
 	FinalUsedPercent    *float64  `json:"final_used_percent"` // 开放行为 null
-	UsedAbsolute        *float64  `json:"used_absolute"`
-	LimitAbsolute       *float64  `json:"limit_absolute"`
 	SampleCount         int       `json:"sample_count"`
 	Finalized           bool      `json:"finalized"`
 }
@@ -176,7 +223,8 @@ func (s *AccountWindowUsageHistoryService) GetWindowHistory(ctx context.Context,
 	if account == nil {
 		return resp, nil
 	}
-	resp.Tracked = account.WindowTrackingEnabled
+	// Tracked = 开关开启 && 平台适用：不适用平台的遗留开关不展示 opt-in 语义
+	resp.Tracked = account.WindowTrackingEnabled && WindowTrackable(account)
 
 	since := time.Now().AddDate(0, 0, -days)
 	records, err := s.windowRepo.ListHistorySince(ctx, accountID, since)
@@ -198,8 +246,6 @@ func windowRecordToEntry(rec *AccountWindowUsageRecord) *AccountWindowUsageEntry
 		WindowStart:         rec.WindowStart,
 		WindowEnd:           rec.WindowEnd,
 		PeakUsedPercent:     rec.PeakUsedPercent,
-		UsedAbsolute:        rec.UsedAbsolute,
-		LimitAbsolute:       rec.LimitAbsolute,
 		SampleCount:         rec.SampleCount,
 		Requests:            rec.Requests,
 		TokensTotal:         rec.TokensTotal,

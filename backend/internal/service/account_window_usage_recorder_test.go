@@ -81,12 +81,6 @@ func (r *stubWindowUsageRepo) UpsertOpenWindow(_ context.Context, row *AccountWi
 		cp.ID = r.nextID
 		r.open[key] = &cp
 	} else {
-		if row.UsedAbsolute != nil {
-			existing.UsedAbsolute = row.UsedAbsolute
-		}
-		if row.LimitAbsolute != nil {
-			existing.LimitAbsolute = row.LimitAbsolute
-		}
 		if row.PeakUsedPercent > existing.PeakUsedPercent {
 			existing.PeakUsedPercent = row.PeakUsedPercent
 		}
@@ -328,7 +322,9 @@ func tier5h(used float64, resetAt time.Time) domain.MonitorQuotaTier {
 }
 
 func snapshotWithTiers(tiers ...domain.MonitorQuotaTier) *domain.MonitorQuotaSnapshot {
-	return &domain.MonitorQuotaSnapshot{Success: true, Tiers: tiers}
+	// FetchedAt 必须是当前时刻：陈旧快照守卫会丢弃 fetchedAt 早于开放行
+	// window_start 的观测（多副本防污染），零值会被整批拒绝
+	return &domain.MonitorQuotaSnapshot{Success: true, Tiers: tiers, FetchedAt: time.Now()}
 }
 
 func TestRecorder_ApplySnapshot_FirstInsertCreatesOpenRow(t *testing.T) {
@@ -494,6 +490,35 @@ func TestRecorder_ApplySnapshot_StalePastResetDoesNotOpenRow(t *testing.T) {
 	require.NoError(t, r.ApplySnapshot(context.Background(), 7, snapshotWithTiers(tier5h(50, skewedReset))))
 	require.Equal(t, 1, repo.upsertCalls)
 	require.NotNil(t, repo.openRow(7, "5h"))
+}
+
+// 多副本陈旧快照守卫：其他副本已把窗口推进到新实例（window_start 前移到
+// 边界 T），本副本进程内缓存仍持有 T 之前抓的旧窗口观测（reset_at 落在
+// 新行 window_end 之前 → 判为 reset 后移）。不守卫的话上一窗口的峰值会经
+// GREATEST 永久写进新窗口。fetchedAt 早于新行 window_start → 整 tier 丢弃。
+func TestRecorder_ApplySnapshot_StaleFetchedAtDoesNotMergeIntoNewWindow(t *testing.T) {
+	repo := newStubWindowUsageRepo()
+	r := newRecorderForTest(repo, &stubWindowUsageLogRepo{}, &stubWindowQuotaSource{})
+
+	// 副本 A：新窗口已开启（边界在前方 3h，起点 = 边界 - 5h ≈ 2h 前）
+	newReset := time.Now().Add(3 * time.Hour).UTC().Truncate(time.Second)
+	require.NoError(t, r.ApplySnapshot(context.Background(), 7, snapshotWithTiers(tier5h(20, newReset))))
+	callsAfterOpen := repo.upsertCalls
+
+	// 副本 B：陈旧快照（reset_at 属于上一窗口 → 相对新行是「后移」路径），
+	// 抓取时间早于新行 window_start → 必须被丢弃，不产生任何写入
+	staleSnapshot := &domain.MonitorQuotaSnapshot{
+		Success:   true,
+		Tiers:     []domain.MonitorQuotaTier{tier5h(98, newReset.Add(-5*time.Hour))},
+		FetchedAt: newReset.Add(-5 * time.Hour).Add(-2 * time.Minute), // 上一窗口期间抓取
+	}
+	require.NoError(t, r.ApplySnapshot(context.Background(), 7, staleSnapshot))
+	require.Equal(t, callsAfterOpen, repo.upsertCalls, "stale snapshot must be dropped, not merged")
+
+	row := repo.openRow(7, "5h")
+	require.NotNil(t, row)
+	require.InDelta(t, 20.0, row.PeakUsedPercent, 0.001, "peak must not inherit the previous window's 98%")
+	require.Equal(t, 1, row.SampleCount)
 }
 
 func TestRecorder_ApplySnapshot_MultipleTiersIndependent(t *testing.T) {

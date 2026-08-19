@@ -811,7 +811,7 @@ export default {
       autoPauseOnExpiredDesc: 'When enabled, the account will auto pause scheduling after it expires',
       windowTracking: {
         title: 'Rolling-Window Usage Tracking',
-        desc: 'Periodically probes rolling-window usage (5h / 7d etc.) and captures the final usage right before each window resets; this increases upstream usage API call frequency.'
+        desc: 'Periodically probes rolling-window usage (5h / 7d etc.) and captures the final usage right before each window resets; only available for Anthropic and CN coding-plan accounts, and increases upstream usage API call frequency.'
       },
 	  autoPause5hThreshold: '5h Usage Threshold (%)',
 	  autoPause7dThreshold: '7d Usage Threshold (%)',

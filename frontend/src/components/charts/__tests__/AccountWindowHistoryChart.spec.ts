@@ -39,8 +39,6 @@ const entry = (overrides: Record<string, unknown> = {}) => ({
   tokens_cache_read: 0,
   peak_used_percent: 80,
   final_used_percent: 50,
-  used_absolute: null,
-  limit_absolute: null,
   sample_count: 3,
   finalized: true,
   ...overrides,
@@ -91,16 +89,6 @@ describe('AccountWindowHistoryChart', () => {
 
     const implied = datasetByLabel(wrapper, 'Implied Limit')
     expect(implied.data).toEqual([2000])
-  })
-
-  it('prefers the provider-reported absolute limit over the derived one', () => {
-    const wrapper = mount(AccountWindowHistoryChart, {
-      props: { entries: [entry({ limit_absolute: 5000 })] },
-      global: { stubs: { LoadingSpinner: true } },
-    })
-
-    const implied = datasetByLabel(wrapper, 'Implied Limit')
-    expect(implied.data).toEqual([5000])
   })
 
   it('breaks the implied limit on open windows (null final/tokens)', () => {

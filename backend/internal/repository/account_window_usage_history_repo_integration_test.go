@@ -76,19 +76,16 @@ func TestAccountWindowUsage_UpsertMergeSemantics(t *testing.T) {
 	require.Equal(t, 1, row.SampleCount)
 	require.InDelta(t, 30.0, row.PeakUsedPercent, 0.001)
 
-	// 合并：peak 取 GREATEST、绝对值 COALESCE、sample 累加
+	// 合并：peak 取 GREATEST、sample 累加
 	require.NoError(t, repo.UpsertOpenWindow(ctx, &service.AccountWindowUsageRecord{
 		AccountID: account.ID, WindowType: "5h", WindowStart: start, WindowEnd: end,
 		PeakUsedPercent: 25, LastUsedPercent: 45, SampleCount: 1,
-		UsedAbsolute: floatPtr(120), LimitAbsolute: floatPtr(400),
 	}))
 	row, err = repo.GetOpenWindow(ctx, account.ID, "5h")
 	require.NoError(t, err)
 	require.Equal(t, 2, row.SampleCount)
 	require.InDelta(t, 30.0, row.PeakUsedPercent, 0.001, "peak must keep the max")
 	require.InDelta(t, 45.0, row.LastUsedPercent, 0.001)
-	require.NotNil(t, row.UsedAbsolute)
-	require.InDelta(t, 120.0, *row.UsedAbsolute, 0.001)
 
 	// window_end 只前移不回退（reset 抖动安全）
 	newEnd := end.Add(10 * time.Minute)
@@ -229,8 +226,8 @@ func TestAccountWindowUsage_DecisiveProbeClaimGuard(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, claimed)
 
-	// 决断预算跟随窗口实例：window_end 前移（滚动窗口滑动到下一窗口）后，
-	// 认领计数与 last_probe_at 重置，新窗口恢复完整预算
+	// 决断预算跟随窗口实例：window_end 前移超过阈值（滚动窗口滑动到下一
+	// 窗口）后，认领计数与 last_probe_at 重置，新窗口恢复完整预算
 	slidedEnd := end.Add(30 * time.Minute)
 	require.NoError(t, repo.UpsertOpenWindow(ctx, &service.AccountWindowUsageRecord{
 		AccountID: tracked.ID, WindowType: "5h",
@@ -247,6 +244,53 @@ func TestAccountWindowUsage_DecisiveProbeClaimGuard(t *testing.T) {
 	claimed, err = repo.ClaimDecisiveProbe(ctx, rowID, now.Add(11*time.Minute), 45*time.Second, 2)
 	require.NoError(t, err)
 	require.True(t, claimed)
+
+	// 亚分钟级前移（reset 秒级抖动）不重置预算：否则抖动反复补充预算，
+	// 「每窗口最多 N 次」退化为每边界大量 force 探测
+	require.NoError(t, repo.UpsertOpenWindow(ctx, &service.AccountWindowUsageRecord{
+		AccountID: tracked.ID, WindowType: "5h",
+		WindowStart: slidedEnd.Add(-5 * time.Hour).Add(5 * time.Second), WindowEnd: slidedEnd.Add(5 * time.Second),
+		PeakUsedPercent: 21, LastUsedPercent: 21, SampleCount: 1,
+	}))
+	open, err = repo.GetOpenWindow(ctx, tracked.ID, "5h")
+	require.NoError(t, err)
+	require.Equal(t, 1, open.DecisiveProbeCount, "sub-threshold slide must keep the probe budget")
+	require.NotNil(t, open.LastProbeAt)
+}
+
+// 平台门控：开关开启但平台不适用（无只读用量 API / 无滚动窗口）的账号不得
+// 进入探测名单——OpenAI 的用量查询是真实推理请求，Gemini/Grok/Antigravity 与
+// CN payg 产不出滚动窗口数据，选取阶段就要排除
+func TestAccountWindowUsage_ListWindowTrackingEnabledPlatformGating(t *testing.T) {
+	repo, client := newWindowRepoForTest(t)
+
+	anthropicAcc := mustCreateWindowAccount(t, client, true) // fixture 默认平台 anthropic
+	codex := mustCreateAccount(t, client, &service.Account{
+		Name: "win-codex-" + uuid.NewString(), Platform: service.PlatformOpenAI, Type: service.AccountTypeOAuth,
+	})
+	cnPayg := mustCreateAccount(t, client, &service.Account{
+		Name: "win-payg-" + uuid.NewString(), Platform: service.PlatformKimi, Type: service.AccountTypeAPIKey,
+	})
+	cnCoding := mustCreateAccount(t, client, &service.Account{
+		Name: "win-coding-" + uuid.NewString(), Platform: service.PlatformKimi, Type: service.AccountTypeAPIKey,
+		Credentials: map[string]any{"account_mode": "coding"},
+	})
+	for _, id := range []int64{codex.ID, cnPayg.ID, cnCoding.ID} {
+		_, err := integrationDB.ExecContext(context.Background(),
+			`UPDATE accounts SET window_tracking_enabled = TRUE WHERE id = $1`, id)
+		require.NoError(t, err, "enable window tracking")
+	}
+
+	ids, err := repo.ListWindowTrackingEnabled(context.Background())
+	require.NoError(t, err)
+	got := make(map[int64]bool, len(ids))
+	for _, id := range ids {
+		got[id] = true
+	}
+	require.True(t, got[anthropicAcc.ID])
+	require.True(t, got[cnCoding.ID], "CN coding plan exposes read-only quota endpoints")
+	require.False(t, got[codex.ID], "openai usage derives from real inference requests; must never be probed")
+	require.False(t, got[cnPayg.ID], "CN payg has balance-only endpoints and no rolling windows")
 }
 
 func TestAccountWindowUsage_HistoryAndPrune(t *testing.T) {
@@ -360,9 +404,4 @@ func TestGetAccountWindowStatsRange_AggregatesOnlyWithinBounds(t *testing.T) {
 	require.Equal(t, int64(152), stats.TokensOutput)       // 50+100+1+1
 	require.Equal(t, int64(31), stats.TokensCacheCreation) // 10+20+1+0
 	require.Equal(t, int64(16), stats.TokensCacheRead)     // 5+10+1+0
-}
-
-// floatPtr 测试辅助。
-func floatPtr(v float64) *float64 {
-	return &v
 }

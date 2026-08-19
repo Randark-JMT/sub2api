@@ -449,6 +449,9 @@ func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]an
 		account.AutoPauseOnExpired = true
 	}
 	if input.WindowTrackingEnabled != nil {
+		if err := ValidateWindowTrackingEnable(account, account.WindowTrackingEnabled, *input.WindowTrackingEnabled); err != nil {
+			return nil, err
+		}
 		account.WindowTrackingEnabled = *input.WindowTrackingEnabled
 	}
 	if input.RateMultiplier != nil {
@@ -785,6 +788,9 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 		account.AutoPauseOnExpired = *input.AutoPauseOnExpired
 	}
 	if input.WindowTrackingEnabled != nil {
+		if err := ValidateWindowTrackingEnable(account, account.WindowTrackingEnabled, *input.WindowTrackingEnabled); err != nil {
+			return nil, err
+		}
 		account.WindowTrackingEnabled = *input.WindowTrackingEnabled
 	}
 

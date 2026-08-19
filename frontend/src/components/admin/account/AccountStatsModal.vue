@@ -408,8 +408,8 @@
           </div>
         </div>
 
-        <!-- Rolling-Window Usage History (opt-in tracking) -->
-        <div v-if="windowHistory" class="card p-4">
+        <!-- Rolling-Window Usage History (opt-in tracking, platform-gated) -->
+        <div v-if="windowHistory && windowTrackablePlatform" class="card p-4">
           <div class="mb-1 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
               {{ t('admin.accounts.stats.windowHistory.title') }}
@@ -608,6 +608,20 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
+
+// 窗口追踪适用平台（与后端 WindowTrackable 同口径）：仅 Anthropic（console
+// usage API，只读）与国产 coding plan（配额端点，只读）具备可主动探测的用量
+// 来源。OpenAI 的用量查询是真实推理请求，Gemini/Grok/Antigravity 与 CN payg
+// 产不出滚动窗口数据——这些平台整块隐藏，也不发无效请求
+const windowTrackablePlatform = computed(() => {
+  const account = props.account
+  if (!account) return false
+  if (account.platform === 'anthropic') return true
+  if (account.platform === 'kimi' || account.platform === 'zhipu' || account.platform === 'deepseek') {
+    return (account.credentials as Record<string, unknown> | undefined)?.account_mode === 'coding'
+  }
+  return false
+})
 
 const loading = ref(false)
 const stats = ref<AccountUsageStatsResponse | null>(null)
@@ -831,14 +845,17 @@ const loadStats = async () => {
   const isCurrent = () => props.account?.id === accountId
 
   loading.value = true
-  // 窗口历史与 stats 并行加载：失败仅隐藏本区块（此时 stats 可能已正常展示）
-  historyLoading.value = true
-  const historyPromise = adminAPI.accounts
-    .getWindowHistory(accountId, 30)
-    .catch((error) => {
-      console.error('Failed to load account window history:', error)
-      return null
-    })
+  // 窗口历史与 stats 并行加载：失败仅隐藏本区块（此时 stats 可能已正常展示）；
+  // 不适用平台直接不发请求（后端同样门控，这里避免无效往返）
+  historyLoading.value = windowTrackablePlatform.value
+  const historyPromise = windowTrackablePlatform.value
+    ? adminAPI.accounts
+        .getWindowHistory(accountId, 30)
+        .catch((error) => {
+          console.error('Failed to load account window history:', error)
+          return null
+        })
+    : Promise.resolve(null)
 
   try {
     const loaded = await adminAPI.accounts.getStats(accountId, 30)
@@ -910,11 +927,9 @@ const formatWindowRange = (entry: AccountWindowUsageEntry): string => {
   return `${fmt(entry.window_start)} → ${fmt(entry.window_end)}`
 }
 
-// 推算限额：优先供应商上报值；最终使用率 <5% 时反推误差过大，显示 —
+// 推算限额：由「窗口 token ÷ 最终使用率」反推；最终使用率 <5% 时反推误差
+// 过大，显示 —
 const formatImpliedLimit = (entry: AccountWindowUsageEntry): string => {
-  if (entry.limit_absolute && entry.limit_absolute > 0) {
-    return formatTokens(entry.limit_absolute)
-  }
   if (
     entry.final_used_percent != null &&
     entry.final_used_percent >= 5 &&

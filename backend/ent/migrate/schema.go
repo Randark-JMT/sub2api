@@ -270,8 +270,6 @@ var (
 		{Name: "window_end", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "peak_used_percent", Type: field.TypeFloat64, Default: 0},
 		{Name: "last_used_percent", Type: field.TypeFloat64, Default: 0},
-		{Name: "used_absolute", Type: field.TypeFloat64, Nullable: true},
-		{Name: "limit_absolute", Type: field.TypeFloat64, Nullable: true},
 		{Name: "sample_count", Type: field.TypeInt, Default: 0},
 		{Name: "decisive_probe_count", Type: field.TypeInt, Default: 0},
 		{Name: "last_probe_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -292,7 +290,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "account_window_usage_histories_accounts_window_usage_histories",
-				Columns:    []*schema.Column{AccountWindowUsageHistoriesColumns[20]},
+				Columns:    []*schema.Column{AccountWindowUsageHistoriesColumns[18]},
 				RefColumns: []*schema.Column{AccountsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -301,7 +299,7 @@ var (
 			{
 				Name:    "accountwindowusagehistory_account_id_window_type",
 				Unique:  true,
-				Columns: []*schema.Column{AccountWindowUsageHistoriesColumns[20], AccountWindowUsageHistoriesColumns[3]},
+				Columns: []*schema.Column{AccountWindowUsageHistoriesColumns[18], AccountWindowUsageHistoriesColumns[3]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "finalized_at IS NULL",
 				},
@@ -309,7 +307,7 @@ var (
 			{
 				Name:    "accountwindowusagehistory_account_id_window_type_window_end",
 				Unique:  false,
-				Columns: []*schema.Column{AccountWindowUsageHistoriesColumns[20], AccountWindowUsageHistoriesColumns[3], AccountWindowUsageHistoriesColumns[5]},
+				Columns: []*schema.Column{AccountWindowUsageHistoriesColumns[18], AccountWindowUsageHistoriesColumns[3], AccountWindowUsageHistoriesColumns[5]},
 			},
 			{
 				Name:    "accountwindowusagehistory_window_end",

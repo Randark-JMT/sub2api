@@ -56,13 +56,6 @@ func (AccountWindowUsageHistory) Fields() []ent.Field {
 			Default(0),
 		field.Float("last_used_percent").
 			Default(0),
-		// used/limit_absolute: 供应商上报绝对用量/限额（如 Codex），仅上报时非空
-		field.Float("used_absolute").
-			Optional().
-			Nillable(),
-		field.Float("limit_absolute").
-			Optional().
-			Nillable(),
 		// sample_count: 常规+决断探测累计采样次数
 		field.Int("sample_count").
 			Default(0),

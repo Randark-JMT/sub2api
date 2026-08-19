@@ -83,10 +83,9 @@ const formatTokens = (value: number): string => {
   return value.toLocaleString()
 }
 
-// 推算限额：优先供应商上报的绝对限额；否则由「窗口 token ÷ 最终使用率」反推。
-// 最终使用率过低（<5%）时反推误差过大，跳过形成断点。
+// 推算限额：由「窗口 token ÷ 最终使用率」反推。最终使用率过低（<5%）时
+// 反推误差过大，跳过形成断点。
 const impliedLimitOf = (entry: AccountWindowUsageEntry): number | null => {
-  if (entry.limit_absolute && entry.limit_absolute > 0) return entry.limit_absolute
   if (!entry.final_used_percent || entry.final_used_percent < 5) return null
   if (!entry.tokens_total) return null
   return entry.tokens_total / (entry.final_used_percent / 100)

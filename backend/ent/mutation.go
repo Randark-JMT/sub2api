@@ -5724,10 +5724,6 @@ type AccountWindowUsageHistoryMutation struct {
 	addpeak_used_percent     *float64
 	last_used_percent        *float64
 	addlast_used_percent     *float64
-	used_absolute            *float64
-	addused_absolute         *float64
-	limit_absolute           *float64
-	addlimit_absolute        *float64
 	sample_count             *int
 	addsample_count          *int
 	decisive_probe_count     *int
@@ -6178,146 +6174,6 @@ func (m *AccountWindowUsageHistoryMutation) AddedLastUsedPercent() (r float64, e
 func (m *AccountWindowUsageHistoryMutation) ResetLastUsedPercent() {
 	m.last_used_percent = nil
 	m.addlast_used_percent = nil
-}
-
-// SetUsedAbsolute sets the "used_absolute" field.
-func (m *AccountWindowUsageHistoryMutation) SetUsedAbsolute(f float64) {
-	m.used_absolute = &f
-	m.addused_absolute = nil
-}
-
-// UsedAbsolute returns the value of the "used_absolute" field in the mutation.
-func (m *AccountWindowUsageHistoryMutation) UsedAbsolute() (r float64, exists bool) {
-	v := m.used_absolute
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldUsedAbsolute returns the old "used_absolute" field's value of the AccountWindowUsageHistory entity.
-// If the AccountWindowUsageHistory object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AccountWindowUsageHistoryMutation) OldUsedAbsolute(ctx context.Context) (v *float64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldUsedAbsolute is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldUsedAbsolute requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldUsedAbsolute: %w", err)
-	}
-	return oldValue.UsedAbsolute, nil
-}
-
-// AddUsedAbsolute adds f to the "used_absolute" field.
-func (m *AccountWindowUsageHistoryMutation) AddUsedAbsolute(f float64) {
-	if m.addused_absolute != nil {
-		*m.addused_absolute += f
-	} else {
-		m.addused_absolute = &f
-	}
-}
-
-// AddedUsedAbsolute returns the value that was added to the "used_absolute" field in this mutation.
-func (m *AccountWindowUsageHistoryMutation) AddedUsedAbsolute() (r float64, exists bool) {
-	v := m.addused_absolute
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearUsedAbsolute clears the value of the "used_absolute" field.
-func (m *AccountWindowUsageHistoryMutation) ClearUsedAbsolute() {
-	m.used_absolute = nil
-	m.addused_absolute = nil
-	m.clearedFields[accountwindowusagehistory.FieldUsedAbsolute] = struct{}{}
-}
-
-// UsedAbsoluteCleared returns if the "used_absolute" field was cleared in this mutation.
-func (m *AccountWindowUsageHistoryMutation) UsedAbsoluteCleared() bool {
-	_, ok := m.clearedFields[accountwindowusagehistory.FieldUsedAbsolute]
-	return ok
-}
-
-// ResetUsedAbsolute resets all changes to the "used_absolute" field.
-func (m *AccountWindowUsageHistoryMutation) ResetUsedAbsolute() {
-	m.used_absolute = nil
-	m.addused_absolute = nil
-	delete(m.clearedFields, accountwindowusagehistory.FieldUsedAbsolute)
-}
-
-// SetLimitAbsolute sets the "limit_absolute" field.
-func (m *AccountWindowUsageHistoryMutation) SetLimitAbsolute(f float64) {
-	m.limit_absolute = &f
-	m.addlimit_absolute = nil
-}
-
-// LimitAbsolute returns the value of the "limit_absolute" field in the mutation.
-func (m *AccountWindowUsageHistoryMutation) LimitAbsolute() (r float64, exists bool) {
-	v := m.limit_absolute
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldLimitAbsolute returns the old "limit_absolute" field's value of the AccountWindowUsageHistory entity.
-// If the AccountWindowUsageHistory object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *AccountWindowUsageHistoryMutation) OldLimitAbsolute(ctx context.Context) (v *float64, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldLimitAbsolute is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldLimitAbsolute requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldLimitAbsolute: %w", err)
-	}
-	return oldValue.LimitAbsolute, nil
-}
-
-// AddLimitAbsolute adds f to the "limit_absolute" field.
-func (m *AccountWindowUsageHistoryMutation) AddLimitAbsolute(f float64) {
-	if m.addlimit_absolute != nil {
-		*m.addlimit_absolute += f
-	} else {
-		m.addlimit_absolute = &f
-	}
-}
-
-// AddedLimitAbsolute returns the value that was added to the "limit_absolute" field in this mutation.
-func (m *AccountWindowUsageHistoryMutation) AddedLimitAbsolute() (r float64, exists bool) {
-	v := m.addlimit_absolute
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ClearLimitAbsolute clears the value of the "limit_absolute" field.
-func (m *AccountWindowUsageHistoryMutation) ClearLimitAbsolute() {
-	m.limit_absolute = nil
-	m.addlimit_absolute = nil
-	m.clearedFields[accountwindowusagehistory.FieldLimitAbsolute] = struct{}{}
-}
-
-// LimitAbsoluteCleared returns if the "limit_absolute" field was cleared in this mutation.
-func (m *AccountWindowUsageHistoryMutation) LimitAbsoluteCleared() bool {
-	_, ok := m.clearedFields[accountwindowusagehistory.FieldLimitAbsolute]
-	return ok
-}
-
-// ResetLimitAbsolute resets all changes to the "limit_absolute" field.
-func (m *AccountWindowUsageHistoryMutation) ResetLimitAbsolute() {
-	m.limit_absolute = nil
-	m.addlimit_absolute = nil
-	delete(m.clearedFields, accountwindowusagehistory.FieldLimitAbsolute)
 }
 
 // SetSampleCount sets the "sample_count" field.
@@ -7011,7 +6867,7 @@ func (m *AccountWindowUsageHistoryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AccountWindowUsageHistoryMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 18)
 	if m.created_at != nil {
 		fields = append(fields, accountwindowusagehistory.FieldCreatedAt)
 	}
@@ -7035,12 +6891,6 @@ func (m *AccountWindowUsageHistoryMutation) Fields() []string {
 	}
 	if m.last_used_percent != nil {
 		fields = append(fields, accountwindowusagehistory.FieldLastUsedPercent)
-	}
-	if m.used_absolute != nil {
-		fields = append(fields, accountwindowusagehistory.FieldUsedAbsolute)
-	}
-	if m.limit_absolute != nil {
-		fields = append(fields, accountwindowusagehistory.FieldLimitAbsolute)
 	}
 	if m.sample_count != nil {
 		fields = append(fields, accountwindowusagehistory.FieldSampleCount)
@@ -7096,10 +6946,6 @@ func (m *AccountWindowUsageHistoryMutation) Field(name string) (ent.Value, bool)
 		return m.PeakUsedPercent()
 	case accountwindowusagehistory.FieldLastUsedPercent:
 		return m.LastUsedPercent()
-	case accountwindowusagehistory.FieldUsedAbsolute:
-		return m.UsedAbsolute()
-	case accountwindowusagehistory.FieldLimitAbsolute:
-		return m.LimitAbsolute()
 	case accountwindowusagehistory.FieldSampleCount:
 		return m.SampleCount()
 	case accountwindowusagehistory.FieldDecisiveProbeCount:
@@ -7145,10 +6991,6 @@ func (m *AccountWindowUsageHistoryMutation) OldField(ctx context.Context, name s
 		return m.OldPeakUsedPercent(ctx)
 	case accountwindowusagehistory.FieldLastUsedPercent:
 		return m.OldLastUsedPercent(ctx)
-	case accountwindowusagehistory.FieldUsedAbsolute:
-		return m.OldUsedAbsolute(ctx)
-	case accountwindowusagehistory.FieldLimitAbsolute:
-		return m.OldLimitAbsolute(ctx)
 	case accountwindowusagehistory.FieldSampleCount:
 		return m.OldSampleCount(ctx)
 	case accountwindowusagehistory.FieldDecisiveProbeCount:
@@ -7234,20 +7076,6 @@ func (m *AccountWindowUsageHistoryMutation) SetField(name string, value ent.Valu
 		}
 		m.SetLastUsedPercent(v)
 		return nil
-	case accountwindowusagehistory.FieldUsedAbsolute:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetUsedAbsolute(v)
-		return nil
-	case accountwindowusagehistory.FieldLimitAbsolute:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetLimitAbsolute(v)
-		return nil
 	case accountwindowusagehistory.FieldSampleCount:
 		v, ok := value.(int)
 		if !ok {
@@ -7332,12 +7160,6 @@ func (m *AccountWindowUsageHistoryMutation) AddedFields() []string {
 	if m.addlast_used_percent != nil {
 		fields = append(fields, accountwindowusagehistory.FieldLastUsedPercent)
 	}
-	if m.addused_absolute != nil {
-		fields = append(fields, accountwindowusagehistory.FieldUsedAbsolute)
-	}
-	if m.addlimit_absolute != nil {
-		fields = append(fields, accountwindowusagehistory.FieldLimitAbsolute)
-	}
 	if m.addsample_count != nil {
 		fields = append(fields, accountwindowusagehistory.FieldSampleCount)
 	}
@@ -7374,10 +7196,6 @@ func (m *AccountWindowUsageHistoryMutation) AddedField(name string) (ent.Value, 
 		return m.AddedPeakUsedPercent()
 	case accountwindowusagehistory.FieldLastUsedPercent:
 		return m.AddedLastUsedPercent()
-	case accountwindowusagehistory.FieldUsedAbsolute:
-		return m.AddedUsedAbsolute()
-	case accountwindowusagehistory.FieldLimitAbsolute:
-		return m.AddedLimitAbsolute()
 	case accountwindowusagehistory.FieldSampleCount:
 		return m.AddedSampleCount()
 	case accountwindowusagehistory.FieldDecisiveProbeCount:
@@ -7416,20 +7234,6 @@ func (m *AccountWindowUsageHistoryMutation) AddField(name string, value ent.Valu
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddLastUsedPercent(v)
-		return nil
-	case accountwindowusagehistory.FieldUsedAbsolute:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddUsedAbsolute(v)
-		return nil
-	case accountwindowusagehistory.FieldLimitAbsolute:
-		v, ok := value.(float64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddLimitAbsolute(v)
 		return nil
 	case accountwindowusagehistory.FieldSampleCount:
 		v, ok := value.(int)
@@ -7495,12 +7299,6 @@ func (m *AccountWindowUsageHistoryMutation) AddField(name string, value ent.Valu
 // mutation.
 func (m *AccountWindowUsageHistoryMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(accountwindowusagehistory.FieldUsedAbsolute) {
-		fields = append(fields, accountwindowusagehistory.FieldUsedAbsolute)
-	}
-	if m.FieldCleared(accountwindowusagehistory.FieldLimitAbsolute) {
-		fields = append(fields, accountwindowusagehistory.FieldLimitAbsolute)
-	}
 	if m.FieldCleared(accountwindowusagehistory.FieldLastProbeAt) {
 		fields = append(fields, accountwindowusagehistory.FieldLastProbeAt)
 	}
@@ -7539,12 +7337,6 @@ func (m *AccountWindowUsageHistoryMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *AccountWindowUsageHistoryMutation) ClearField(name string) error {
 	switch name {
-	case accountwindowusagehistory.FieldUsedAbsolute:
-		m.ClearUsedAbsolute()
-		return nil
-	case accountwindowusagehistory.FieldLimitAbsolute:
-		m.ClearLimitAbsolute()
-		return nil
 	case accountwindowusagehistory.FieldLastProbeAt:
 		m.ClearLastProbeAt()
 		return nil
@@ -7600,12 +7392,6 @@ func (m *AccountWindowUsageHistoryMutation) ResetField(name string) error {
 		return nil
 	case accountwindowusagehistory.FieldLastUsedPercent:
 		m.ResetLastUsedPercent()
-		return nil
-	case accountwindowusagehistory.FieldUsedAbsolute:
-		m.ResetUsedAbsolute()
-		return nil
-	case accountwindowusagehistory.FieldLimitAbsolute:
-		m.ResetLimitAbsolute()
 		return nil
 	case accountwindowusagehistory.FieldSampleCount:
 		m.ResetSampleCount()

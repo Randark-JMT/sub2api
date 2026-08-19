@@ -251,6 +251,9 @@ func (s *AccountService) Create(ctx context.Context, req CreateAccountRequest) (
 		account.AutoPauseOnExpired = true
 	}
 	if req.WindowTrackingEnabled != nil {
+		if err := ValidateWindowTrackingEnable(account, account.WindowTrackingEnabled, *req.WindowTrackingEnabled); err != nil {
+			return nil, err
+		}
 		account.WindowTrackingEnabled = *req.WindowTrackingEnabled
 	}
 
@@ -371,6 +374,9 @@ func (s *AccountService) Update(ctx context.Context, id int64, req UpdateAccount
 		account.AutoPauseOnExpired = *req.AutoPauseOnExpired
 	}
 	if req.WindowTrackingEnabled != nil {
+		if err := ValidateWindowTrackingEnable(account, account.WindowTrackingEnabled, *req.WindowTrackingEnabled); err != nil {
+			return nil, err
+		}
 		account.WindowTrackingEnabled = *req.WindowTrackingEnabled
 	}
 

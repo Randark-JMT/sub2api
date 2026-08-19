@@ -30,10 +30,6 @@ const (
 	FieldPeakUsedPercent = "peak_used_percent"
 	// FieldLastUsedPercent holds the string denoting the last_used_percent field in the database.
 	FieldLastUsedPercent = "last_used_percent"
-	// FieldUsedAbsolute holds the string denoting the used_absolute field in the database.
-	FieldUsedAbsolute = "used_absolute"
-	// FieldLimitAbsolute holds the string denoting the limit_absolute field in the database.
-	FieldLimitAbsolute = "limit_absolute"
 	// FieldSampleCount holds the string denoting the sample_count field in the database.
 	FieldSampleCount = "sample_count"
 	// FieldDecisiveProbeCount holds the string denoting the decisive_probe_count field in the database.
@@ -78,8 +74,6 @@ var Columns = []string{
 	FieldWindowEnd,
 	FieldPeakUsedPercent,
 	FieldLastUsedPercent,
-	FieldUsedAbsolute,
-	FieldLimitAbsolute,
 	FieldSampleCount,
 	FieldDecisiveProbeCount,
 	FieldLastProbeAt,
@@ -167,16 +161,6 @@ func ByPeakUsedPercent(opts ...sql.OrderTermOption) OrderOption {
 // ByLastUsedPercent orders the results by the last_used_percent field.
 func ByLastUsedPercent(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastUsedPercent, opts...).ToFunc()
-}
-
-// ByUsedAbsolute orders the results by the used_absolute field.
-func ByUsedAbsolute(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUsedAbsolute, opts...).ToFunc()
-}
-
-// ByLimitAbsolute orders the results by the limit_absolute field.
-func ByLimitAbsolute(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldLimitAbsolute, opts...).ToFunc()
 }
 
 // BySampleCount orders the results by the sample_count field.

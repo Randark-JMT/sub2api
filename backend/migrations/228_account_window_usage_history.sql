@@ -1,12 +1,15 @@
--- Migration: 227_account_window_usage_history
+-- Migration: 228_account_window_usage_history
 -- 账号滚动窗口用量历史：
 --   1. 新表 account_window_usage_histories：每账号每滚动窗口类型（5h/7d/7d-sonnet/
 --      7d-fable/weekly）一行开放记录，窗口关闭（finalized_at 非空）后由 usage_logs
 --      聚合回填 token 明细；局部唯一索引保证「每账号每窗口类型至多一行开放记录」
 --      （记录器原子 upsert 的冲突目标）
---   2. accounts.window_tracking_enabled：opt-in 开关（默认关闭）。启用后后台记录器
---      会定时探测账号各滚动窗口用量，并在窗口重置前做决断性 force 探测——
---      会增加上游用量 API 调用，故按账号显式启用
+--   2. accounts.window_tracking_enabled：opt-in 开关（默认关闭）。仅对有只读用量
+--      API 的平台生效（Anthropic console usage / 国产 coding plan 配额端点）——
+--      OpenAI(Codex) 的用量只能经真实推理请求的响应头推导，主动探测会消耗账号
+--      自身配额并污染测量对象，Gemini/Grok/Antigravity 无滚动窗口语义，均不纳入。
+--      启用后后台记录器会定时查询上游用量 API 并在窗口重置前做决断性查询，
+--      故按账号显式启用
 --   3. 保留期 90 天，由每日维护任务物理删除（日志类表，不用软删除）
 
 CREATE TABLE IF NOT EXISTS account_window_usage_histories (
@@ -17,8 +20,6 @@ CREATE TABLE IF NOT EXISTS account_window_usage_histories (
     window_end TIMESTAMPTZ NOT NULL,
     peak_used_percent DOUBLE PRECISION NOT NULL DEFAULT 0,
     last_used_percent DOUBLE PRECISION NOT NULL DEFAULT 0,
-    used_absolute DOUBLE PRECISION,
-    limit_absolute DOUBLE PRECISION,
     sample_count INT NOT NULL DEFAULT 0,
     decisive_probe_count INT NOT NULL DEFAULT 0,
     last_probe_at TIMESTAMPTZ,
@@ -54,7 +55,7 @@ ALTER TABLE accounts
     ADD COLUMN IF NOT EXISTS window_tracking_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 
 COMMENT ON COLUMN accounts.window_tracking_enabled IS
-    'opt-in 滚动窗口用量历史记录（启用会增加上游用量 API 调用）';
+    'opt-in 滚动窗口用量历史记录（启用会增加上游用量 API 调用；仅 Anthropic 与国产 coding plan 生效）';
 
 CREATE INDEX IF NOT EXISTS idx_accounts_window_tracking_enabled
     ON accounts(window_tracking_enabled) WHERE window_tracking_enabled;

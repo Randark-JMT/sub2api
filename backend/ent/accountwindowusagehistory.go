@@ -34,10 +34,6 @@ type AccountWindowUsageHistory struct {
 	PeakUsedPercent float64 `json:"peak_used_percent,omitempty"`
 	// LastUsedPercent holds the value of the "last_used_percent" field.
 	LastUsedPercent float64 `json:"last_used_percent,omitempty"`
-	// UsedAbsolute holds the value of the "used_absolute" field.
-	UsedAbsolute *float64 `json:"used_absolute,omitempty"`
-	// LimitAbsolute holds the value of the "limit_absolute" field.
-	LimitAbsolute *float64 `json:"limit_absolute,omitempty"`
 	// SampleCount holds the value of the "sample_count" field.
 	SampleCount int `json:"sample_count,omitempty"`
 	// DecisiveProbeCount holds the value of the "decisive_probe_count" field.
@@ -89,7 +85,7 @@ func (*AccountWindowUsageHistory) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case accountwindowusagehistory.FieldPeakUsedPercent, accountwindowusagehistory.FieldLastUsedPercent, accountwindowusagehistory.FieldUsedAbsolute, accountwindowusagehistory.FieldLimitAbsolute:
+		case accountwindowusagehistory.FieldPeakUsedPercent, accountwindowusagehistory.FieldLastUsedPercent:
 			values[i] = new(sql.NullFloat64)
 		case accountwindowusagehistory.FieldID, accountwindowusagehistory.FieldAccountID, accountwindowusagehistory.FieldSampleCount, accountwindowusagehistory.FieldDecisiveProbeCount, accountwindowusagehistory.FieldRequests, accountwindowusagehistory.FieldTokensTotal, accountwindowusagehistory.FieldTokensInput, accountwindowusagehistory.FieldTokensOutput, accountwindowusagehistory.FieldTokensCacheCreation, accountwindowusagehistory.FieldTokensCacheRead:
 			values[i] = new(sql.NullInt64)
@@ -165,20 +161,6 @@ func (_m *AccountWindowUsageHistory) assignValues(columns []string, values []any
 				return fmt.Errorf("unexpected type %T for field last_used_percent", values[i])
 			} else if value.Valid {
 				_m.LastUsedPercent = value.Float64
-			}
-		case accountwindowusagehistory.FieldUsedAbsolute:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field used_absolute", values[i])
-			} else if value.Valid {
-				_m.UsedAbsolute = new(float64)
-				*_m.UsedAbsolute = value.Float64
-			}
-		case accountwindowusagehistory.FieldLimitAbsolute:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field limit_absolute", values[i])
-			} else if value.Valid {
-				_m.LimitAbsolute = new(float64)
-				*_m.LimitAbsolute = value.Float64
 			}
 		case accountwindowusagehistory.FieldSampleCount:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -312,16 +294,6 @@ func (_m *AccountWindowUsageHistory) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("last_used_percent=")
 	builder.WriteString(fmt.Sprintf("%v", _m.LastUsedPercent))
-	builder.WriteString(", ")
-	if v := _m.UsedAbsolute; v != nil {
-		builder.WriteString("used_absolute=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
-	builder.WriteString(", ")
-	if v := _m.LimitAbsolute; v != nil {
-		builder.WriteString("limit_absolute=")
-		builder.WriteString(fmt.Sprintf("%v", *v))
-	}
 	builder.WriteString(", ")
 	builder.WriteString("sample_count=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SampleCount))

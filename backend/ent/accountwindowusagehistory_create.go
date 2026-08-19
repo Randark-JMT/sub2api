@@ -103,34 +103,6 @@ func (_c *AccountWindowUsageHistoryCreate) SetNillableLastUsedPercent(v *float64
 	return _c
 }
 
-// SetUsedAbsolute sets the "used_absolute" field.
-func (_c *AccountWindowUsageHistoryCreate) SetUsedAbsolute(v float64) *AccountWindowUsageHistoryCreate {
-	_c.mutation.SetUsedAbsolute(v)
-	return _c
-}
-
-// SetNillableUsedAbsolute sets the "used_absolute" field if the given value is not nil.
-func (_c *AccountWindowUsageHistoryCreate) SetNillableUsedAbsolute(v *float64) *AccountWindowUsageHistoryCreate {
-	if v != nil {
-		_c.SetUsedAbsolute(*v)
-	}
-	return _c
-}
-
-// SetLimitAbsolute sets the "limit_absolute" field.
-func (_c *AccountWindowUsageHistoryCreate) SetLimitAbsolute(v float64) *AccountWindowUsageHistoryCreate {
-	_c.mutation.SetLimitAbsolute(v)
-	return _c
-}
-
-// SetNillableLimitAbsolute sets the "limit_absolute" field if the given value is not nil.
-func (_c *AccountWindowUsageHistoryCreate) SetNillableLimitAbsolute(v *float64) *AccountWindowUsageHistoryCreate {
-	if v != nil {
-		_c.SetLimitAbsolute(*v)
-	}
-	return _c
-}
-
 // SetSampleCount sets the "sample_count" field.
 func (_c *AccountWindowUsageHistoryCreate) SetSampleCount(v int) *AccountWindowUsageHistoryCreate {
 	_c.mutation.SetSampleCount(v)
@@ -432,14 +404,6 @@ func (_c *AccountWindowUsageHistoryCreate) createSpec() (*AccountWindowUsageHist
 		_spec.SetField(accountwindowusagehistory.FieldLastUsedPercent, field.TypeFloat64, value)
 		_node.LastUsedPercent = value
 	}
-	if value, ok := _c.mutation.UsedAbsolute(); ok {
-		_spec.SetField(accountwindowusagehistory.FieldUsedAbsolute, field.TypeFloat64, value)
-		_node.UsedAbsolute = &value
-	}
-	if value, ok := _c.mutation.LimitAbsolute(); ok {
-		_spec.SetField(accountwindowusagehistory.FieldLimitAbsolute, field.TypeFloat64, value)
-		_node.LimitAbsolute = &value
-	}
 	if value, ok := _c.mutation.SampleCount(); ok {
 		_spec.SetField(accountwindowusagehistory.FieldSampleCount, field.TypeInt, value)
 		_node.SampleCount = value
@@ -642,54 +606,6 @@ func (u *AccountWindowUsageHistoryUpsert) UpdateLastUsedPercent() *AccountWindow
 // AddLastUsedPercent adds v to the "last_used_percent" field.
 func (u *AccountWindowUsageHistoryUpsert) AddLastUsedPercent(v float64) *AccountWindowUsageHistoryUpsert {
 	u.Add(accountwindowusagehistory.FieldLastUsedPercent, v)
-	return u
-}
-
-// SetUsedAbsolute sets the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsert) SetUsedAbsolute(v float64) *AccountWindowUsageHistoryUpsert {
-	u.Set(accountwindowusagehistory.FieldUsedAbsolute, v)
-	return u
-}
-
-// UpdateUsedAbsolute sets the "used_absolute" field to the value that was provided on create.
-func (u *AccountWindowUsageHistoryUpsert) UpdateUsedAbsolute() *AccountWindowUsageHistoryUpsert {
-	u.SetExcluded(accountwindowusagehistory.FieldUsedAbsolute)
-	return u
-}
-
-// AddUsedAbsolute adds v to the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsert) AddUsedAbsolute(v float64) *AccountWindowUsageHistoryUpsert {
-	u.Add(accountwindowusagehistory.FieldUsedAbsolute, v)
-	return u
-}
-
-// ClearUsedAbsolute clears the value of the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsert) ClearUsedAbsolute() *AccountWindowUsageHistoryUpsert {
-	u.SetNull(accountwindowusagehistory.FieldUsedAbsolute)
-	return u
-}
-
-// SetLimitAbsolute sets the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsert) SetLimitAbsolute(v float64) *AccountWindowUsageHistoryUpsert {
-	u.Set(accountwindowusagehistory.FieldLimitAbsolute, v)
-	return u
-}
-
-// UpdateLimitAbsolute sets the "limit_absolute" field to the value that was provided on create.
-func (u *AccountWindowUsageHistoryUpsert) UpdateLimitAbsolute() *AccountWindowUsageHistoryUpsert {
-	u.SetExcluded(accountwindowusagehistory.FieldLimitAbsolute)
-	return u
-}
-
-// AddLimitAbsolute adds v to the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsert) AddLimitAbsolute(v float64) *AccountWindowUsageHistoryUpsert {
-	u.Add(accountwindowusagehistory.FieldLimitAbsolute, v)
-	return u
-}
-
-// ClearLimitAbsolute clears the value of the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsert) ClearLimitAbsolute() *AccountWindowUsageHistoryUpsert {
-	u.SetNull(accountwindowusagehistory.FieldLimitAbsolute)
 	return u
 }
 
@@ -1063,62 +979,6 @@ func (u *AccountWindowUsageHistoryUpsertOne) AddLastUsedPercent(v float64) *Acco
 func (u *AccountWindowUsageHistoryUpsertOne) UpdateLastUsedPercent() *AccountWindowUsageHistoryUpsertOne {
 	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
 		s.UpdateLastUsedPercent()
-	})
-}
-
-// SetUsedAbsolute sets the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertOne) SetUsedAbsolute(v float64) *AccountWindowUsageHistoryUpsertOne {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.SetUsedAbsolute(v)
-	})
-}
-
-// AddUsedAbsolute adds v to the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertOne) AddUsedAbsolute(v float64) *AccountWindowUsageHistoryUpsertOne {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.AddUsedAbsolute(v)
-	})
-}
-
-// UpdateUsedAbsolute sets the "used_absolute" field to the value that was provided on create.
-func (u *AccountWindowUsageHistoryUpsertOne) UpdateUsedAbsolute() *AccountWindowUsageHistoryUpsertOne {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.UpdateUsedAbsolute()
-	})
-}
-
-// ClearUsedAbsolute clears the value of the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertOne) ClearUsedAbsolute() *AccountWindowUsageHistoryUpsertOne {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.ClearUsedAbsolute()
-	})
-}
-
-// SetLimitAbsolute sets the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertOne) SetLimitAbsolute(v float64) *AccountWindowUsageHistoryUpsertOne {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.SetLimitAbsolute(v)
-	})
-}
-
-// AddLimitAbsolute adds v to the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertOne) AddLimitAbsolute(v float64) *AccountWindowUsageHistoryUpsertOne {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.AddLimitAbsolute(v)
-	})
-}
-
-// UpdateLimitAbsolute sets the "limit_absolute" field to the value that was provided on create.
-func (u *AccountWindowUsageHistoryUpsertOne) UpdateLimitAbsolute() *AccountWindowUsageHistoryUpsertOne {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.UpdateLimitAbsolute()
-	})
-}
-
-// ClearLimitAbsolute clears the value of the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertOne) ClearLimitAbsolute() *AccountWindowUsageHistoryUpsertOne {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.ClearLimitAbsolute()
 	})
 }
 
@@ -1694,62 +1554,6 @@ func (u *AccountWindowUsageHistoryUpsertBulk) AddLastUsedPercent(v float64) *Acc
 func (u *AccountWindowUsageHistoryUpsertBulk) UpdateLastUsedPercent() *AccountWindowUsageHistoryUpsertBulk {
 	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
 		s.UpdateLastUsedPercent()
-	})
-}
-
-// SetUsedAbsolute sets the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertBulk) SetUsedAbsolute(v float64) *AccountWindowUsageHistoryUpsertBulk {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.SetUsedAbsolute(v)
-	})
-}
-
-// AddUsedAbsolute adds v to the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertBulk) AddUsedAbsolute(v float64) *AccountWindowUsageHistoryUpsertBulk {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.AddUsedAbsolute(v)
-	})
-}
-
-// UpdateUsedAbsolute sets the "used_absolute" field to the value that was provided on create.
-func (u *AccountWindowUsageHistoryUpsertBulk) UpdateUsedAbsolute() *AccountWindowUsageHistoryUpsertBulk {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.UpdateUsedAbsolute()
-	})
-}
-
-// ClearUsedAbsolute clears the value of the "used_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertBulk) ClearUsedAbsolute() *AccountWindowUsageHistoryUpsertBulk {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.ClearUsedAbsolute()
-	})
-}
-
-// SetLimitAbsolute sets the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertBulk) SetLimitAbsolute(v float64) *AccountWindowUsageHistoryUpsertBulk {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.SetLimitAbsolute(v)
-	})
-}
-
-// AddLimitAbsolute adds v to the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertBulk) AddLimitAbsolute(v float64) *AccountWindowUsageHistoryUpsertBulk {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.AddLimitAbsolute(v)
-	})
-}
-
-// UpdateLimitAbsolute sets the "limit_absolute" field to the value that was provided on create.
-func (u *AccountWindowUsageHistoryUpsertBulk) UpdateLimitAbsolute() *AccountWindowUsageHistoryUpsertBulk {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.UpdateLimitAbsolute()
-	})
-}
-
-// ClearLimitAbsolute clears the value of the "limit_absolute" field.
-func (u *AccountWindowUsageHistoryUpsertBulk) ClearLimitAbsolute() *AccountWindowUsageHistoryUpsertBulk {
-	return u.Update(func(s *AccountWindowUsageHistoryUpsert) {
-		s.ClearLimitAbsolute()
 	})
 }
 

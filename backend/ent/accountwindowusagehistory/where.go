@@ -95,16 +95,6 @@ func LastUsedPercent(v float64) predicate.AccountWindowUsageHistory {
 	return predicate.AccountWindowUsageHistory(sql.FieldEQ(FieldLastUsedPercent, v))
 }
 
-// UsedAbsolute applies equality check predicate on the "used_absolute" field. It's identical to UsedAbsoluteEQ.
-func UsedAbsolute(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldEQ(FieldUsedAbsolute, v))
-}
-
-// LimitAbsolute applies equality check predicate on the "limit_absolute" field. It's identical to LimitAbsoluteEQ.
-func LimitAbsolute(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldEQ(FieldLimitAbsolute, v))
-}
-
 // SampleCount applies equality check predicate on the "sample_count" field. It's identical to SampleCountEQ.
 func SampleCount(v int) predicate.AccountWindowUsageHistory {
 	return predicate.AccountWindowUsageHistory(sql.FieldEQ(FieldSampleCount, v))
@@ -478,106 +468,6 @@ func LastUsedPercentLT(v float64) predicate.AccountWindowUsageHistory {
 // LastUsedPercentLTE applies the LTE predicate on the "last_used_percent" field.
 func LastUsedPercentLTE(v float64) predicate.AccountWindowUsageHistory {
 	return predicate.AccountWindowUsageHistory(sql.FieldLTE(FieldLastUsedPercent, v))
-}
-
-// UsedAbsoluteEQ applies the EQ predicate on the "used_absolute" field.
-func UsedAbsoluteEQ(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldEQ(FieldUsedAbsolute, v))
-}
-
-// UsedAbsoluteNEQ applies the NEQ predicate on the "used_absolute" field.
-func UsedAbsoluteNEQ(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldNEQ(FieldUsedAbsolute, v))
-}
-
-// UsedAbsoluteIn applies the In predicate on the "used_absolute" field.
-func UsedAbsoluteIn(vs ...float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldIn(FieldUsedAbsolute, vs...))
-}
-
-// UsedAbsoluteNotIn applies the NotIn predicate on the "used_absolute" field.
-func UsedAbsoluteNotIn(vs ...float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldNotIn(FieldUsedAbsolute, vs...))
-}
-
-// UsedAbsoluteGT applies the GT predicate on the "used_absolute" field.
-func UsedAbsoluteGT(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldGT(FieldUsedAbsolute, v))
-}
-
-// UsedAbsoluteGTE applies the GTE predicate on the "used_absolute" field.
-func UsedAbsoluteGTE(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldGTE(FieldUsedAbsolute, v))
-}
-
-// UsedAbsoluteLT applies the LT predicate on the "used_absolute" field.
-func UsedAbsoluteLT(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldLT(FieldUsedAbsolute, v))
-}
-
-// UsedAbsoluteLTE applies the LTE predicate on the "used_absolute" field.
-func UsedAbsoluteLTE(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldLTE(FieldUsedAbsolute, v))
-}
-
-// UsedAbsoluteIsNil applies the IsNil predicate on the "used_absolute" field.
-func UsedAbsoluteIsNil() predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldIsNull(FieldUsedAbsolute))
-}
-
-// UsedAbsoluteNotNil applies the NotNil predicate on the "used_absolute" field.
-func UsedAbsoluteNotNil() predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldNotNull(FieldUsedAbsolute))
-}
-
-// LimitAbsoluteEQ applies the EQ predicate on the "limit_absolute" field.
-func LimitAbsoluteEQ(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldEQ(FieldLimitAbsolute, v))
-}
-
-// LimitAbsoluteNEQ applies the NEQ predicate on the "limit_absolute" field.
-func LimitAbsoluteNEQ(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldNEQ(FieldLimitAbsolute, v))
-}
-
-// LimitAbsoluteIn applies the In predicate on the "limit_absolute" field.
-func LimitAbsoluteIn(vs ...float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldIn(FieldLimitAbsolute, vs...))
-}
-
-// LimitAbsoluteNotIn applies the NotIn predicate on the "limit_absolute" field.
-func LimitAbsoluteNotIn(vs ...float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldNotIn(FieldLimitAbsolute, vs...))
-}
-
-// LimitAbsoluteGT applies the GT predicate on the "limit_absolute" field.
-func LimitAbsoluteGT(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldGT(FieldLimitAbsolute, v))
-}
-
-// LimitAbsoluteGTE applies the GTE predicate on the "limit_absolute" field.
-func LimitAbsoluteGTE(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldGTE(FieldLimitAbsolute, v))
-}
-
-// LimitAbsoluteLT applies the LT predicate on the "limit_absolute" field.
-func LimitAbsoluteLT(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldLT(FieldLimitAbsolute, v))
-}
-
-// LimitAbsoluteLTE applies the LTE predicate on the "limit_absolute" field.
-func LimitAbsoluteLTE(v float64) predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldLTE(FieldLimitAbsolute, v))
-}
-
-// LimitAbsoluteIsNil applies the IsNil predicate on the "limit_absolute" field.
-func LimitAbsoluteIsNil() predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldIsNull(FieldLimitAbsolute))
-}
-
-// LimitAbsoluteNotNil applies the NotNil predicate on the "limit_absolute" field.
-func LimitAbsoluteNotNil() predicate.AccountWindowUsageHistory {
-	return predicate.AccountWindowUsageHistory(sql.FieldNotNull(FieldLimitAbsolute))
 }
 
 // SampleCountEQ applies the EQ predicate on the "sample_count" field.

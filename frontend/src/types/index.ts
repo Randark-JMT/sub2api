@@ -2168,8 +2168,6 @@ export interface AccountWindowUsageEntry {
   peak_used_percent: number
   /** final utilization observed before the window closed; null while open */
   final_used_percent: number | null
-  used_absolute: number | null
-  limit_absolute: number | null
   sample_count: number
   finalized: boolean
 }

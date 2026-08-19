@@ -32,13 +32,13 @@ func NewAccountWindowUsageRepository(client *dbent.Client, db *sql.DB) service.A
 // accountWindowColumnsH 为 JOIN accounts 查询用的 h. 前缀消歧版本。
 const (
 	accountWindowColumns = `id, account_id, window_type, window_start, window_end,
-	peak_used_percent, last_used_percent, used_absolute, limit_absolute,
+	peak_used_percent, last_used_percent,
 	sample_count, decisive_probe_count, last_probe_at,
 	requests, tokens_total, tokens_input, tokens_output, tokens_cache_creation, tokens_cache_read,
 	finalized_at`
 
 	accountWindowColumnsH = `h.id, h.account_id, h.window_type, h.window_start, h.window_end,
-	h.peak_used_percent, h.last_used_percent, h.used_absolute, h.limit_absolute,
+	h.peak_used_percent, h.last_used_percent,
 	h.sample_count, h.decisive_probe_count, h.last_probe_at,
 	h.requests, h.tokens_total, h.tokens_input, h.tokens_output, h.tokens_cache_creation, h.tokens_cache_read,
 	h.finalized_at`
@@ -86,31 +86,31 @@ func (r *accountWindowUsageRepository) ListHistorySince(ctx context.Context, acc
 // UpsertOpenWindow 原子插入/合并开放行。
 //
 // 冲突目标为局部唯一索引 (account_id, window_type) WHERE finalized_at IS NULL。
-// 合并语义：peak 取 GREATEST、last 直接覆盖、绝对值 COALESCE（保留最后非空）、
-// sample_count 累加；window_end 只前移不回退（上游 reset 抖动/并发乱序均安全），
-// 随之前移时 window_start 一并重算、决断认领预算重置（预算归属窗口实例），
+// 合并语义：peak 取 GREATEST、last 直接覆盖、sample_count 累加；
+// window_end 只前移不回退（上游 reset 抖动/并发乱序均安全），随之前移时
+// window_start 一并重算；决断预算仅在前移超过 decisiveBudgetSlideWindow 时
+// 重置（秒级 reset 抖动不重置，避免亚分钟滑动反复补充探测预算），
 // 保证 [start, end) 恰为最终窗口。
 func (r *accountWindowUsageRepository) UpsertOpenWindow(ctx context.Context, row *service.AccountWindowUsageRecord) error {
 	query := `
 		INSERT INTO account_window_usage_histories
 			(account_id, window_type, window_start, window_end,
-			 peak_used_percent, last_used_percent, used_absolute, limit_absolute,
-			 sample_count)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			 peak_used_percent, last_used_percent, sample_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (account_id, window_type) WHERE finalized_at IS NULL
 		DO UPDATE SET
 			peak_used_percent = GREATEST(
 				account_window_usage_histories.peak_used_percent, EXCLUDED.peak_used_percent),
 			last_used_percent = EXCLUDED.last_used_percent,
-			used_absolute = COALESCE(EXCLUDED.used_absolute, account_window_usage_histories.used_absolute),
-			limit_absolute = COALESCE(EXCLUDED.limit_absolute, account_window_usage_histories.limit_absolute),
 			sample_count = account_window_usage_histories.sample_count + EXCLUDED.sample_count,
-			-- 决断预算跟随窗口实例：window_end 前移即视为新窗口，重置认领计数
+			-- 决断预算跟随窗口实例：前移超过阈值才视为新窗口实例，重置认领计数
 			decisive_probe_count = CASE
-				WHEN EXCLUDED.window_end > account_window_usage_histories.window_end THEN 0
+				WHEN EXCLUDED.window_end > account_window_usage_histories.window_end + make_interval(secs => $8)
+				THEN 0
 				ELSE account_window_usage_histories.decisive_probe_count END,
 			last_probe_at = CASE
-				WHEN EXCLUDED.window_end > account_window_usage_histories.window_end THEN NULL
+				WHEN EXCLUDED.window_end > account_window_usage_histories.window_end + make_interval(secs => $8)
+				THEN NULL
 				ELSE account_window_usage_histories.last_probe_at END,
 			window_end = GREATEST(account_window_usage_histories.window_end, EXCLUDED.window_end),
 			window_start = CASE
@@ -121,8 +121,8 @@ func (r *accountWindowUsageRepository) UpsertOpenWindow(ctx context.Context, row
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		row.AccountID, row.WindowType, row.WindowStart, row.WindowEnd,
-		row.PeakUsedPercent, row.LastUsedPercent, row.UsedAbsolute, row.LimitAbsolute,
-		row.SampleCount,
+		row.PeakUsedPercent, row.LastUsedPercent, row.SampleCount,
+		service.DecisiveBudgetSlideWindow.Seconds(),
 	)
 	if err != nil {
 		return fmt.Errorf("upsert open window failed: %w", err)
@@ -159,6 +159,9 @@ func (r *accountWindowUsageRepository) FinalizeWindow(ctx context.Context, id in
 
 // ReplaceOpenWindow 事务内关闭旧开放行 + 写入新开放行（状态机的旧窗口过期路径）。
 // 旧行已被并发关闭时 finalize no-op，仅写入新行。
+//
+// 注意：本方法自开事务，不得在外层事务上下文中调用（ent 事务上下文中的
+// r.db 直连会脱离外层事务，造成半提交）。
 func (r *accountWindowUsageRepository) ReplaceOpenWindow(ctx context.Context, oldID int64, stats *usagestats.WindowTokenStats, newRow *service.AccountWindowUsageRecord, now time.Time) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -186,23 +189,22 @@ func (r *accountWindowUsageRepository) ReplaceOpenWindow(ctx context.Context, ol
 	insertQuery := `
 		INSERT INTO account_window_usage_histories
 			(account_id, window_type, window_start, window_end,
-			 peak_used_percent, last_used_percent, used_absolute, limit_absolute,
-			 sample_count)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			 peak_used_percent, last_used_percent, sample_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (account_id, window_type) WHERE finalized_at IS NULL
 		DO UPDATE SET
 			peak_used_percent = GREATEST(
 				account_window_usage_histories.peak_used_percent, EXCLUDED.peak_used_percent),
 			last_used_percent = EXCLUDED.last_used_percent,
-			used_absolute = COALESCE(EXCLUDED.used_absolute, account_window_usage_histories.used_absolute),
-			limit_absolute = COALESCE(EXCLUDED.limit_absolute, account_window_usage_histories.limit_absolute),
 			sample_count = account_window_usage_histories.sample_count + EXCLUDED.sample_count,
-			-- 决断预算跟随窗口实例：window_end 前移即视为新窗口，重置认领计数
+			-- 决断预算跟随窗口实例：前移超过阈值才视为新窗口实例，重置认领计数
 			decisive_probe_count = CASE
-				WHEN EXCLUDED.window_end > account_window_usage_histories.window_end THEN 0
+				WHEN EXCLUDED.window_end > account_window_usage_histories.window_end + make_interval(secs => $8)
+				THEN 0
 				ELSE account_window_usage_histories.decisive_probe_count END,
 			last_probe_at = CASE
-				WHEN EXCLUDED.window_end > account_window_usage_histories.window_end THEN NULL
+				WHEN EXCLUDED.window_end > account_window_usage_histories.window_end + make_interval(secs => $8)
+				THEN NULL
 				ELSE account_window_usage_histories.last_probe_at END,
 			window_end = GREATEST(account_window_usage_histories.window_end, EXCLUDED.window_end),
 			window_start = CASE
@@ -213,8 +215,8 @@ func (r *accountWindowUsageRepository) ReplaceOpenWindow(ctx context.Context, ol
 	`
 	if _, err := tx.ExecContext(ctx, insertQuery,
 		newRow.AccountID, newRow.WindowType, newRow.WindowStart, newRow.WindowEnd,
-		newRow.PeakUsedPercent, newRow.LastUsedPercent, newRow.UsedAbsolute, newRow.LimitAbsolute,
-		newRow.SampleCount,
+		newRow.PeakUsedPercent, newRow.LastUsedPercent, newRow.SampleCount,
+		service.DecisiveBudgetSlideWindow.Seconds(),
 	); err != nil {
 		return fmt.Errorf("replace open window insert failed: %w", err)
 	}
@@ -323,10 +325,21 @@ func (r *accountWindowUsageRepository) PruneStaleOpenBefore(ctx context.Context,
 	return affected, nil
 }
 
-// ListWindowTrackingEnabled 列出启用窗口追踪且未软删的账号 ID。
+// ListWindowTrackingEnabled 列出启用窗口追踪、未软删且平台适用的账号 ID。
+//
+// 平台门控在 SQL 层做，而不是探测后再丢弃：不适用的账号启用开关后每 15 分钟
+// 仍会被探测一次（OpenAI 的用量查询是真实推理请求，Gemini/Grok/Antigravity/
+// CN payg 产不出滚动窗口数据），必须在选取阶段排除。适用平台 = Anthropic
+// （console usage API，只读）+ 国产 coding plan（配额端点，只读）；
+// coding plan 存于 credentials["account_mode"]（明文 JSONB）。
 func (r *accountWindowUsageRepository) ListWindowTrackingEnabled(ctx context.Context) ([]int64, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT id FROM accounts WHERE window_tracking_enabled = TRUE AND deleted_at IS NULL ORDER BY id`,
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id FROM accounts
+		WHERE window_tracking_enabled = TRUE AND deleted_at IS NULL
+		  AND (platform = $1
+		       OR (platform IN ($2, $3, $4) AND credentials->>'account_mode' = $5))
+		ORDER BY id`,
+		service.TrackablePlatformSQLArgs()...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list window tracking enabled accounts failed: %w", err)
@@ -356,7 +369,7 @@ func scanAccountWindowRows(rows *sql.Rows) ([]*service.AccountWindowUsageRecord,
 		rec := &service.AccountWindowUsageRecord{}
 		if err := rows.Scan(
 			&rec.ID, &rec.AccountID, &rec.WindowType, &rec.WindowStart, &rec.WindowEnd,
-			&rec.PeakUsedPercent, &rec.LastUsedPercent, &rec.UsedAbsolute, &rec.LimitAbsolute,
+			&rec.PeakUsedPercent, &rec.LastUsedPercent,
 			&rec.SampleCount, &rec.DecisiveProbeCount, &rec.LastProbeAt,
 			&rec.Requests, &rec.TokensTotal, &rec.TokensInput, &rec.TokensOutput,
 			&rec.TokensCacheCreation, &rec.TokensCacheRead,
@@ -382,8 +395,6 @@ func entToAccountWindowRecord(row *dbent.AccountWindowUsageHistory) *service.Acc
 		WindowEnd:           row.WindowEnd,
 		PeakUsedPercent:     row.PeakUsedPercent,
 		LastUsedPercent:     row.LastUsedPercent,
-		UsedAbsolute:        row.UsedAbsolute,
-		LimitAbsolute:       row.LimitAbsolute,
 		SampleCount:         row.SampleCount,
 		DecisiveProbeCount:  row.DecisiveProbeCount,
 		LastProbeAt:         row.LastProbeAt,

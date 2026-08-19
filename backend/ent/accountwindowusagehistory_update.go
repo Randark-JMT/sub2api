@@ -133,60 +133,6 @@ func (_u *AccountWindowUsageHistoryUpdate) AddLastUsedPercent(v float64) *Accoun
 	return _u
 }
 
-// SetUsedAbsolute sets the "used_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdate) SetUsedAbsolute(v float64) *AccountWindowUsageHistoryUpdate {
-	_u.mutation.ResetUsedAbsolute()
-	_u.mutation.SetUsedAbsolute(v)
-	return _u
-}
-
-// SetNillableUsedAbsolute sets the "used_absolute" field if the given value is not nil.
-func (_u *AccountWindowUsageHistoryUpdate) SetNillableUsedAbsolute(v *float64) *AccountWindowUsageHistoryUpdate {
-	if v != nil {
-		_u.SetUsedAbsolute(*v)
-	}
-	return _u
-}
-
-// AddUsedAbsolute adds value to the "used_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdate) AddUsedAbsolute(v float64) *AccountWindowUsageHistoryUpdate {
-	_u.mutation.AddUsedAbsolute(v)
-	return _u
-}
-
-// ClearUsedAbsolute clears the value of the "used_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdate) ClearUsedAbsolute() *AccountWindowUsageHistoryUpdate {
-	_u.mutation.ClearUsedAbsolute()
-	return _u
-}
-
-// SetLimitAbsolute sets the "limit_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdate) SetLimitAbsolute(v float64) *AccountWindowUsageHistoryUpdate {
-	_u.mutation.ResetLimitAbsolute()
-	_u.mutation.SetLimitAbsolute(v)
-	return _u
-}
-
-// SetNillableLimitAbsolute sets the "limit_absolute" field if the given value is not nil.
-func (_u *AccountWindowUsageHistoryUpdate) SetNillableLimitAbsolute(v *float64) *AccountWindowUsageHistoryUpdate {
-	if v != nil {
-		_u.SetLimitAbsolute(*v)
-	}
-	return _u
-}
-
-// AddLimitAbsolute adds value to the "limit_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdate) AddLimitAbsolute(v float64) *AccountWindowUsageHistoryUpdate {
-	_u.mutation.AddLimitAbsolute(v)
-	return _u
-}
-
-// ClearLimitAbsolute clears the value of the "limit_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdate) ClearLimitAbsolute() *AccountWindowUsageHistoryUpdate {
-	_u.mutation.ClearLimitAbsolute()
-	return _u
-}
-
 // SetSampleCount sets the "sample_count" field.
 func (_u *AccountWindowUsageHistoryUpdate) SetSampleCount(v int) *AccountWindowUsageHistoryUpdate {
 	_u.mutation.ResetSampleCount()
@@ -532,24 +478,6 @@ func (_u *AccountWindowUsageHistoryUpdate) sqlSave(ctx context.Context) (_node i
 	if value, ok := _u.mutation.AddedLastUsedPercent(); ok {
 		_spec.AddField(accountwindowusagehistory.FieldLastUsedPercent, field.TypeFloat64, value)
 	}
-	if value, ok := _u.mutation.UsedAbsolute(); ok {
-		_spec.SetField(accountwindowusagehistory.FieldUsedAbsolute, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedUsedAbsolute(); ok {
-		_spec.AddField(accountwindowusagehistory.FieldUsedAbsolute, field.TypeFloat64, value)
-	}
-	if _u.mutation.UsedAbsoluteCleared() {
-		_spec.ClearField(accountwindowusagehistory.FieldUsedAbsolute, field.TypeFloat64)
-	}
-	if value, ok := _u.mutation.LimitAbsolute(); ok {
-		_spec.SetField(accountwindowusagehistory.FieldLimitAbsolute, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedLimitAbsolute(); ok {
-		_spec.AddField(accountwindowusagehistory.FieldLimitAbsolute, field.TypeFloat64, value)
-	}
-	if _u.mutation.LimitAbsoluteCleared() {
-		_spec.ClearField(accountwindowusagehistory.FieldLimitAbsolute, field.TypeFloat64)
-	}
 	if value, ok := _u.mutation.SampleCount(); ok {
 		_spec.SetField(accountwindowusagehistory.FieldSampleCount, field.TypeInt, value)
 	}
@@ -778,60 +706,6 @@ func (_u *AccountWindowUsageHistoryUpdateOne) SetNillableLastUsedPercent(v *floa
 // AddLastUsedPercent adds value to the "last_used_percent" field.
 func (_u *AccountWindowUsageHistoryUpdateOne) AddLastUsedPercent(v float64) *AccountWindowUsageHistoryUpdateOne {
 	_u.mutation.AddLastUsedPercent(v)
-	return _u
-}
-
-// SetUsedAbsolute sets the "used_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdateOne) SetUsedAbsolute(v float64) *AccountWindowUsageHistoryUpdateOne {
-	_u.mutation.ResetUsedAbsolute()
-	_u.mutation.SetUsedAbsolute(v)
-	return _u
-}
-
-// SetNillableUsedAbsolute sets the "used_absolute" field if the given value is not nil.
-func (_u *AccountWindowUsageHistoryUpdateOne) SetNillableUsedAbsolute(v *float64) *AccountWindowUsageHistoryUpdateOne {
-	if v != nil {
-		_u.SetUsedAbsolute(*v)
-	}
-	return _u
-}
-
-// AddUsedAbsolute adds value to the "used_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdateOne) AddUsedAbsolute(v float64) *AccountWindowUsageHistoryUpdateOne {
-	_u.mutation.AddUsedAbsolute(v)
-	return _u
-}
-
-// ClearUsedAbsolute clears the value of the "used_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdateOne) ClearUsedAbsolute() *AccountWindowUsageHistoryUpdateOne {
-	_u.mutation.ClearUsedAbsolute()
-	return _u
-}
-
-// SetLimitAbsolute sets the "limit_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdateOne) SetLimitAbsolute(v float64) *AccountWindowUsageHistoryUpdateOne {
-	_u.mutation.ResetLimitAbsolute()
-	_u.mutation.SetLimitAbsolute(v)
-	return _u
-}
-
-// SetNillableLimitAbsolute sets the "limit_absolute" field if the given value is not nil.
-func (_u *AccountWindowUsageHistoryUpdateOne) SetNillableLimitAbsolute(v *float64) *AccountWindowUsageHistoryUpdateOne {
-	if v != nil {
-		_u.SetLimitAbsolute(*v)
-	}
-	return _u
-}
-
-// AddLimitAbsolute adds value to the "limit_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdateOne) AddLimitAbsolute(v float64) *AccountWindowUsageHistoryUpdateOne {
-	_u.mutation.AddLimitAbsolute(v)
-	return _u
-}
-
-// ClearLimitAbsolute clears the value of the "limit_absolute" field.
-func (_u *AccountWindowUsageHistoryUpdateOne) ClearLimitAbsolute() *AccountWindowUsageHistoryUpdateOne {
-	_u.mutation.ClearLimitAbsolute()
 	return _u
 }
 
@@ -1209,24 +1083,6 @@ func (_u *AccountWindowUsageHistoryUpdateOne) sqlSave(ctx context.Context) (_nod
 	}
 	if value, ok := _u.mutation.AddedLastUsedPercent(); ok {
 		_spec.AddField(accountwindowusagehistory.FieldLastUsedPercent, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.UsedAbsolute(); ok {
-		_spec.SetField(accountwindowusagehistory.FieldUsedAbsolute, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedUsedAbsolute(); ok {
-		_spec.AddField(accountwindowusagehistory.FieldUsedAbsolute, field.TypeFloat64, value)
-	}
-	if _u.mutation.UsedAbsoluteCleared() {
-		_spec.ClearField(accountwindowusagehistory.FieldUsedAbsolute, field.TypeFloat64)
-	}
-	if value, ok := _u.mutation.LimitAbsolute(); ok {
-		_spec.SetField(accountwindowusagehistory.FieldLimitAbsolute, field.TypeFloat64, value)
-	}
-	if value, ok := _u.mutation.AddedLimitAbsolute(); ok {
-		_spec.AddField(accountwindowusagehistory.FieldLimitAbsolute, field.TypeFloat64, value)
-	}
-	if _u.mutation.LimitAbsoluteCleared() {
-		_spec.ClearField(accountwindowusagehistory.FieldLimitAbsolute, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.SampleCount(); ok {
 		_spec.SetField(accountwindowusagehistory.FieldSampleCount, field.TypeInt, value)

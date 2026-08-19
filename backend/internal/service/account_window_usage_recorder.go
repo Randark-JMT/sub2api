@@ -45,8 +45,9 @@ type AccountWindowUsageRecorder struct {
 	stopped bool
 	mu      sync.Mutex
 
-	// lastBaseline 每账号上次常规探测提交时间（内存态；重启后丢失仅导致
-	// 多一次探测，上游由抓取器缓存去重）
+	// lastBaseline 每账号下次常规探测的到期时刻（提交时一次性算好
+	// interval+jitter，评估时不再重摇；重启后丢失仅导致多一次探测，
+	// 上游由抓取器缓存去重）
 	lastBaseline   map[int64]time.Time
 	lastBaselineMu sync.Mutex
 
@@ -116,7 +117,7 @@ func NewAccountWindowUsageRecorder(
 
 // Start 启动记录器循环。调用方需保证只调一次（wire provider 内调用）。
 func (r *AccountWindowUsageRecorder) Start() {
-	if r == nil || r.windowRepo == nil || r.fetcher == nil {
+	if r == nil || r.windowRepo == nil || r.usageLogRepo == nil || r.fetcher == nil {
 		return
 	}
 	r.mu.Lock()
@@ -190,6 +191,14 @@ func (r *AccountWindowUsageRecorder) runLoop() {
 
 // runOnce 单轮调度。errors 只记日志：单轮失败不影响下一轮。
 func (r *AccountWindowUsageRecorder) runOnce(ctx context.Context) {
+	// ticker goroutine 的 panic 兜底（池 worker 各有 recover，这里补齐调度路径），
+	// 否则一次 panic 会静默杀死该进程余生的记录器循环
+	defer func() {
+		if rec := recover(); rec != nil {
+			slog.Error("account_window_usage: scheduler tick panic", "panic", rec)
+		}
+	}()
+
 	now := time.Now()
 
 	r.finalizeExpired(ctx, now)
@@ -200,14 +209,19 @@ func (r *AccountWindowUsageRecorder) runOnce(ctx context.Context) {
 // finalizeExpired 关闭已过期（window_end + grace 已过）的开放行并回填 token 明细。
 // 不限启用账号：中途关闭追踪的账号也要把遗留行收尾。
 func (r *AccountWindowUsageRecorder) finalizeExpired(ctx context.Context, now time.Time) {
+	// 聚合串行跑在 ticker goroutine 上：整体封顶一个 tick，队头慢查询
+	// 不会推迟后续探测调度（扫描按 window_end 升序，最旧行跨 tick 优先排空）
+	fctx, cancel := context.WithTimeout(ctx, recorderTickInterval)
+	defer cancel()
+
 	cutoff := now.Add(-recorderFinalizeGrace)
-	rows, err := r.windowRepo.ListExpiredOpenWindows(ctx, cutoff, recorderSweepLimit)
+	rows, err := r.windowRepo.ListExpiredOpenWindows(fctx, cutoff, recorderSweepLimit)
 	if err != nil {
 		slog.Warn("account_window_usage: list expired open windows failed", "error", err)
 		return
 	}
 	for _, rec := range rows {
-		if _, err := r.finalizeRecord(ctx, rec, now); err != nil {
+		if _, err := r.finalizeRecord(fctx, rec, now); err != nil {
 			slog.Warn("account_window_usage: finalize window failed",
 				"account_id", rec.AccountID, "window_type", rec.WindowType, "error", err)
 		}
@@ -251,23 +265,21 @@ func (r *AccountWindowUsageRecorder) scheduleBaselineProbes(ctx context.Context,
 	}
 }
 
-// baselineDue 判定账号常规探测是否到期。阈值带每次评估随机化的抖动
-// （interval ~ interval+jitter 之间的随机期限），用于打散多账号的并发节奏。
+// baselineDue 判定账号常规探测是否到期。到期时刻在提交时一次性算好
+// （interval ~ interval+jitter 之间的随机期限）：若每次评估重摇 jitter，
+// 多次抽样的最小值会显著低于单次期望，打散效果名存实亡。
 func (r *AccountWindowUsageRecorder) baselineDue(accountID int64, now time.Time) bool {
 	r.lastBaselineMu.Lock()
-	last, ok := r.lastBaseline[accountID]
+	due, ok := r.lastBaseline[accountID]
 	r.lastBaselineMu.Unlock()
-	if !ok {
-		return true
-	}
-	jitter := time.Duration(rand.Int64N(int64(recorderBaselineJitter) + 1))
-	return now.Sub(last) >= recorderBaselineInterval+jitter
+	return !ok || !now.Before(due)
 }
 
-// markBaseline 记录账号常规探测的提交时间。
+// markBaseline 记录账号常规探测的提交时间并摇出下一次的到期时刻。
 func (r *AccountWindowUsageRecorder) markBaseline(accountID int64, now time.Time) {
+	jitter := time.Duration(rand.Int64N(int64(recorderBaselineJitter) + 1))
 	r.lastBaselineMu.Lock()
-	r.lastBaseline[accountID] = now
+	r.lastBaseline[accountID] = now.Add(recorderBaselineInterval + jitter)
 	r.lastBaselineMu.Unlock()
 }
 
@@ -395,7 +407,7 @@ func (r *AccountWindowUsageRecorder) ApplySnapshot(ctx context.Context, accountI
 	// 单个 tier 失败不阻断其余窗口：记录首个错误，处理完所有 tier 后返回
 	var firstErr error
 	for _, tier := range snapshot.Tiers {
-		if err := r.applyTier(ctx, accountID, tier, now); err != nil && firstErr == nil {
+		if err := r.applyTier(ctx, accountID, tier, snapshot.FetchedAt, now); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
@@ -403,7 +415,7 @@ func (r *AccountWindowUsageRecorder) ApplySnapshot(ctx context.Context, accountI
 }
 
 // applyTier 处理单个窗口 tier 的状态迁移。
-func (r *AccountWindowUsageRecorder) applyTier(ctx context.Context, accountID int64, tier domain.MonitorQuotaTier, now time.Time) error {
+func (r *AccountWindowUsageRecorder) applyTier(ctx context.Context, accountID int64, tier domain.MonitorQuotaTier, fetchedAt, now time.Time) error {
 	if !recordedWindow(tier.Window) || tier.ResetAt == "" {
 		return nil
 	}
@@ -419,6 +431,16 @@ func (r *AccountWindowUsageRecorder) applyTier(ctx context.Context, accountID in
 		return err
 	}
 
+	// 陈旧快照守卫：多副本下其他副本可能已把窗口推进到新实例，而本副本进程内
+	// 的快照缓存（成功 5min TTL）仍持有上一窗口的观测。这类快照若落入「reset
+	// 后移」分支，上一窗口的峰值会经 GREATEST 永久写进新窗口（peak 单调无
+	// 自愈路径）；若落入「旧窗口过期」分支则会按旧边界重开重复行。抓取时间
+	// 早于当前开放行的窗口起点 → 属于上一窗口实例，丢弃（容时钟秒级偏差）。
+	// 单副本不受影响：陈旧读必然早于行推进，落入同窗合并，天然无害。
+	if open != nil && fetchedAt.Before(open.WindowStart.Add(-recorderResetEpsilon)) {
+		return nil
+	}
+
 	// 构造本次采样的指标增量（sample_count 语义：插入时为 1，合并时累加 1）
 	buildRow := func(start, end time.Time) *AccountWindowUsageRecord {
 		return &AccountWindowUsageRecord{
@@ -428,8 +450,6 @@ func (r *AccountWindowUsageRecorder) applyTier(ctx context.Context, accountID in
 			WindowEnd:       end,
 			PeakUsedPercent: tier.UsedPercent,
 			LastUsedPercent: tier.UsedPercent,
-			UsedAbsolute:    absPtr(tier.Used),
-			LimitAbsolute:   absPtr(tier.Limit),
 			SampleCount:     1,
 		}
 	}
@@ -469,14 +489,6 @@ func (r *AccountWindowUsageRecorder) applyTier(ctx context.Context, accountID in
 	default:
 		return r.windowRepo.UpsertOpenWindow(ctx, buildRow(open.WindowStart, open.WindowEnd))
 	}
-}
-
-// absPtr 把 tier 的绝对用量/限额转为可选指针（0 视为未上报）。
-func absPtr(v float64) *float64 {
-	if v <= 0 {
-		return nil
-	}
-	return &v
 }
 
 func (r *AccountWindowUsageRecorder) tryAcquireInFlight(accountID int64) bool {

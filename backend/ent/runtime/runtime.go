@@ -313,11 +313,11 @@ func init() {
 	// accountwindowusagehistory.DefaultLastUsedPercent holds the default value on creation for the last_used_percent field.
 	accountwindowusagehistory.DefaultLastUsedPercent = accountwindowusagehistoryDescLastUsedPercent.Default.(float64)
 	// accountwindowusagehistoryDescSampleCount is the schema descriptor for sample_count field.
-	accountwindowusagehistoryDescSampleCount := accountwindowusagehistoryFields[8].Descriptor()
+	accountwindowusagehistoryDescSampleCount := accountwindowusagehistoryFields[6].Descriptor()
 	// accountwindowusagehistory.DefaultSampleCount holds the default value on creation for the sample_count field.
 	accountwindowusagehistory.DefaultSampleCount = accountwindowusagehistoryDescSampleCount.Default.(int)
 	// accountwindowusagehistoryDescDecisiveProbeCount is the schema descriptor for decisive_probe_count field.
-	accountwindowusagehistoryDescDecisiveProbeCount := accountwindowusagehistoryFields[9].Descriptor()
+	accountwindowusagehistoryDescDecisiveProbeCount := accountwindowusagehistoryFields[7].Descriptor()
 	// accountwindowusagehistory.DefaultDecisiveProbeCount holds the default value on creation for the decisive_probe_count field.
 	accountwindowusagehistory.DefaultDecisiveProbeCount = accountwindowusagehistoryDescDecisiveProbeCount.Default.(int)
 	announcementFields := schema.Announcement{}.Fields()

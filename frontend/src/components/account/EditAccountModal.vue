@@ -2174,7 +2174,7 @@
         </div>
       </div>
 
-      <div>
+      <div v-if="windowTrackablePlatform">
         <div class="flex items-center justify-between">
           <div>
             <label class="input-label mb-0">{{
@@ -2951,6 +2951,18 @@ const cnAccountModeOptions = computed<Array<{ value: CnAccountMode; labelKey: 'p
     ]
   }
 )
+// 窗口追踪适用平台（与后端 WindowTrackable 同口径）：仅 Anthropic（console
+// usage API，只读）与国产 coding plan（配额端点，只读）可被主动探测。
+// OpenAI 的用量查询是真实推理请求、Gemini/Grok/Antigravity 与 CN payg 产不出
+// 滚动窗口数据——开关整块隐藏（后端 API 同样拒绝在不适用平台启用）。
+const windowTrackablePlatform = computed(() => {
+  const platform = props.account?.platform
+  if (platform === 'anthropic') return true
+  if (platform === 'kimi' || platform === 'zhipu' || platform === 'deepseek') {
+    return editAccountMode.value === 'coding'
+  }
+  return false
+})
 const cnProtocolOptions = computed<Array<{ value: CnApiProtocol; labelKey: string }>>(() => {
   const opts: Array<{ value: CnApiProtocol; labelKey: string }> = [
     { value: 'chat_completions', labelKey: 'chatCompletions' },
