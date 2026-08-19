@@ -41,6 +41,7 @@ type UsageLogRepository interface {
 	ListByModelAndTimeRange(ctx context.Context, modelName string, startTime, endTime time.Time) ([]UsageLog, *pagination.PaginationResult, error)
 
 	GetAccountWindowStats(ctx context.Context, accountID int64, startTime time.Time) (*usagestats.AccountStats, error)
+	GetAccountWindowStatsRange(ctx context.Context, accountID int64, startTime, endTime time.Time) (*usagestats.WindowTokenStats, error)
 	GetAccountTodayStats(ctx context.Context, accountID int64) (*usagestats.AccountStats, error)
 
 	// Admin dashboard stats
@@ -395,7 +396,9 @@ func (s *AccountUsageService) getUsageForAccount(ctx context.Context, account *A
 	if account.CanGetUsage() {
 		var apiResp *ClaudeUsageResponse
 
-		// 1. 检查缓存（成功响应 3 分钟 / 错误响应 1 分钟）
+		// 1. 检查缓存（成功响应 3 分钟 / 错误响应 1 分钟）。
+		// force 探测只跳过正缓存（拿到最新窗口数据），负缓存无条件生效——
+		// 上游 429/故障期间强制刷新只会雪上加霜，等负缓存过期自愈。
 		if cached, ok := s.cache.apiCache.Load(accountID); ok {
 			if cache, ok := cached.(*apiUsageCache); ok {
 				age := time.Since(cache.timestamp)
@@ -403,7 +406,7 @@ func (s *AccountUsageService) getUsageForAccount(ctx context.Context, account *A
 					// 负缓存命中：返回缓存的错误，避免重试风暴
 					return nil, cache.err
 				}
-				if cache.response != nil && age < apiCacheTTL {
+				if cache.response != nil && age < apiCacheTTL && !forceProbe {
 					apiResp = cache.response
 				}
 			}
@@ -429,7 +432,7 @@ func (s *AccountUsageService) getUsageForAccount(ctx context.Context, account *A
 						if cache.err != nil && age < apiErrorCacheTTL {
 							return nil, cache.err
 						}
-						if cache.response != nil && age < apiCacheTTL {
+						if cache.response != nil && age < apiCacheTTL && !forceProbe {
 							return cache.response, nil
 						}
 					}

@@ -149,7 +149,8 @@ func createAccountRecord(ctx context.Context, client *dbent.Client, account *ser
 		SetStatus(account.Status).
 		SetErrorMessage(account.ErrorMessage).
 		SetSchedulable(account.Schedulable).
-		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
+		SetAutoPauseOnExpired(account.AutoPauseOnExpired).
+		SetWindowTrackingEnabled(account.WindowTrackingEnabled)
 
 	if account.RateMultiplier != nil {
 		builder.SetRateMultiplier(*account.RateMultiplier)
@@ -538,7 +539,8 @@ func (r *accountRepository) updateLockedAccount(
 		SetStatus(account.Status).
 		SetErrorMessage(account.ErrorMessage).
 		SetSchedulable(schedulable).
-		SetAutoPauseOnExpired(account.AutoPauseOnExpired)
+		SetAutoPauseOnExpired(account.AutoPauseOnExpired).
+		SetWindowTrackingEnabled(account.WindowTrackingEnabled)
 
 	if explicitRateMultiplier != nil {
 		builder.SetRateMultiplier(*explicitRateMultiplier)
@@ -3387,6 +3389,7 @@ func accountEntityToService(m *dbent.Account) *service.Account {
 		LastUsedAt:              m.LastUsedAt,
 		ExpiresAt:               m.ExpiresAt,
 		AutoPauseOnExpired:      m.AutoPauseOnExpired,
+		WindowTrackingEnabled:   m.WindowTrackingEnabled,
 		CreatedAt:               m.CreatedAt,
 		UpdatedAt:               m.UpdatedAt,
 		Schedulable:             m.Schedulable,

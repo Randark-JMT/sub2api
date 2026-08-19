@@ -257,6 +257,7 @@ func AccountFromServiceShallow(a *service.Account) *Account {
 		LastUsedAt:              a.LastUsedAt,
 		ExpiresAt:               timeToUnixSeconds(a.ExpiresAt),
 		AutoPauseOnExpired:      a.AutoPauseOnExpired,
+		WindowTrackingEnabled:   a.WindowTrackingEnabled,
 		CreatedAt:               a.CreatedAt,
 		UpdatedAt:               a.UpdatedAt,
 		Schedulable:             a.Schedulable,

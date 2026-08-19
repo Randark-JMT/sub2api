@@ -64,6 +64,7 @@ type AccountHandler struct {
 	grokImportProber        grokImportProber
 	upstreamBillingProbe    *service.UpstreamBillingProbeService
 	ollamaCloudUsage        *service.OllamaCloudUsageService
+	windowUsageHistory      *service.AccountWindowUsageHistoryService
 }
 
 // SetUpstreamBillingProbeService attaches the optional remote billing probe service.
@@ -73,6 +74,11 @@ func (h *AccountHandler) SetUpstreamBillingProbeService(probe *service.UpstreamB
 
 func (h *AccountHandler) SetOllamaCloudUsageService(usage *service.OllamaCloudUsageService) {
 	h.ollamaCloudUsage = usage
+}
+
+// SetWindowUsageHistoryService attaches the optional rolling-window usage history service.
+func (h *AccountHandler) SetWindowUsageHistoryService(svc *service.AccountWindowUsageHistoryService) {
+	h.windowUsageHistory = svc
 }
 
 // NewAccountHandler creates a new admin account handler
@@ -126,6 +132,7 @@ type CreateAccountRequest struct {
 	GroupIDs                []int64        `json:"group_ids"`
 	ExpiresAt               *int64         `json:"expires_at"`
 	AutoPauseOnExpired      *bool          `json:"auto_pause_on_expired"`
+	WindowTrackingEnabled   *bool          `json:"window_tracking_enabled"`
 	ProbeEnabled            *bool          `json:"upstream_billing_probe_enabled"`
 	ConfirmMixedChannelRisk *bool          `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
 }
@@ -147,6 +154,7 @@ type UpdateAccountRequest struct {
 	GroupIDs                *[]int64       `json:"group_ids"`
 	ExpiresAt               *int64         `json:"expires_at"`
 	AutoPauseOnExpired      *bool          `json:"auto_pause_on_expired"`
+	WindowTrackingEnabled   *bool          `json:"window_tracking_enabled"`
 	ProbeEnabled            *bool          `json:"upstream_billing_probe_enabled"`
 	RateSyncEnabled         *bool          `json:"upstream_billing_rate_sync_enabled"`
 	ConfirmMixedChannelRisk *bool          `json:"confirm_mixed_channel_risk"` // 用户确认混合渠道风险
@@ -861,6 +869,7 @@ func (h *AccountHandler) Create(c *gin.Context) {
 			GroupIDs:              req.GroupIDs,
 			ExpiresAt:             req.ExpiresAt,
 			AutoPauseOnExpired:    req.AutoPauseOnExpired,
+			WindowTrackingEnabled: req.WindowTrackingEnabled,
 			ProbeEnabled:          req.ProbeEnabled,
 			SkipMixedChannelCheck: skipCheck,
 		})
@@ -989,6 +998,7 @@ func (h *AccountHandler) Update(c *gin.Context) {
 		GroupIDs:              req.GroupIDs,
 		ExpiresAt:             req.ExpiresAt,
 		AutoPauseOnExpired:    req.AutoPauseOnExpired,
+		WindowTrackingEnabled: req.WindowTrackingEnabled,
 		ProbeEnabled:          req.ProbeEnabled,
 		RateSyncEnabled:       req.RateSyncEnabled,
 		SkipMixedChannelCheck: skipCheck,
@@ -1521,6 +1531,40 @@ func (h *AccountHandler) GetStats(c *gin.Context) {
 	response.Success(c, stats)
 }
 
+// GetWindowHistory handles getting rolling-window usage history
+// GET /api/v1/admin/accounts/:id/window-history
+func (h *AccountHandler) GetWindowHistory(c *gin.Context) {
+	accountID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "Invalid account ID")
+		return
+	}
+
+	// Parse days parameter (default 30; invalid or out of the 1-90 range falls back to 30)
+	days := 30
+	if daysStr := c.Query("days"); daysStr != "" {
+		if d, err := strconv.Atoi(daysStr); err == nil && d > 0 && d <= 90 {
+			days = d
+		}
+	}
+
+	if h.windowUsageHistory == nil {
+		// 服务未注入（极端裁剪部署）：按宽松语义返回空数据而非 500
+		response.Success(c, &service.AccountWindowHistoryResponse{
+			Windows: map[string][]*service.AccountWindowUsageEntry{},
+		})
+		return
+	}
+
+	history, err := h.windowUsageHistory.GetWindowHistory(c.Request.Context(), accountID, days)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	response.Success(c, history)
+}
+
 // ClearError handles clearing account error
 // POST /api/v1/admin/accounts/:id/clear-error
 func (h *AccountHandler) ClearError(c *gin.Context) {
@@ -1914,6 +1958,7 @@ func (h *AccountHandler) BatchCreate(c *gin.Context) {
 				GroupIDs:              item.GroupIDs,
 				ExpiresAt:             item.ExpiresAt,
 				AutoPauseOnExpired:    item.AutoPauseOnExpired,
+				WindowTrackingEnabled: item.WindowTrackingEnabled,
 				SkipMixedChannelCheck: skipCheck,
 			})
 			if err != nil {

@@ -125,25 +125,37 @@ func (f *ChannelMonitorQuotaFetcher) LoadAccount(ctx context.Context, id int64) 
 
 // Fetch 抓取账号的最新配额快照。永不返回 error：失败降级为
 // Success=false 快照（Error 带摘要），保证检测历史的时间线连续。
-func (f *ChannelMonitorQuotaFetcher) Fetch(ctx context.Context, accountID int64) *domain.MonitorQuotaSnapshot {
+//
+// force=true 跳过本层 TTL 缓存并向上透传（AccountUsageService.GetUsage 的
+// force 语义）：供账号滚动窗口记录器在窗口重置前做决断性探测，拿到窗口
+// 关闭前的最终用量。结果仍写入缓存，监控链路随之受益。
+func (f *ChannelMonitorQuotaFetcher) Fetch(ctx context.Context, accountID int64, force ...bool) *domain.MonitorQuotaSnapshot {
 	if f == nil {
 		// fail-closed：fetcher 未注入（存量测试构造）时不 panic，降级为错误快照。
 		return quotaErrorSnapshot("usage", "quota fetcher is not configured", time.Now())
 	}
 
 	now := time.Now()
+	forceProbe := len(force) > 0 && force[0]
 
-	if cached, ok := f.cachedSnapshot(accountID, now); ok {
-		return cached
+	if !forceProbe {
+		if cached, ok := f.cachedSnapshot(accountID, now); ok {
+			return cached
+		}
 	}
 
 	// singleflight 合并同账号并发抓取；脱离调用方 ctx（仿 CN 配额服务），
-	// 避免某个监控的取消波及共享同一账号的其他监控。
+	// 避免某个监控的取消波及共享同一账号的其他监控。force 用独立 flight 键：
+	// 并入常规 flight 时闭包沿用发起方的 force=false，可能把上层 3 分钟正缓存
+	// 里的陈旧数据当作「决断」结果返回，违背 force 语义。
 	key := "monitor-quota:" + strconv.FormatInt(accountID, 10)
+	if forceProbe {
+		key += ":force"
+	}
 	ch := f.flight.DoChan(key, func() (any, error) {
 		fetchCtx, cancel := context.WithTimeout(context.Background(), monitorQuotaFetchTimeout)
 		defer cancel()
-		snapshot := f.fetchUncached(fetchCtx, accountID, time.Now())
+		snapshot := f.fetchUncached(fetchCtx, accountID, time.Now(), forceProbe)
 		// 失败也进短 TTL 负缓存：凭据失效/故障期间不必每次调度都打上游。
 		ttl := monitorQuotaFetchCacheTTL
 		if !snapshot.Success {
@@ -180,7 +192,7 @@ func (f *ChannelMonitorQuotaFetcher) storeSnapshot(accountID int64, snapshot *do
 	f.cache[accountID] = monitorQuotaCacheEntry{snapshot: snapshot, expiry: expiry}
 }
 
-func (f *ChannelMonitorQuotaFetcher) fetchUncached(ctx context.Context, accountID int64, now time.Time) *domain.MonitorQuotaSnapshot {
+func (f *ChannelMonitorQuotaFetcher) fetchUncached(ctx context.Context, accountID int64, now time.Time, forceProbe bool) *domain.MonitorQuotaSnapshot {
 	if f == nil {
 		return quotaErrorSnapshot("usage", "quota fetcher is not configured", now)
 	}
@@ -204,16 +216,17 @@ func (f *ChannelMonitorQuotaFetcher) fetchUncached(ctx context.Context, accountI
 		}
 		return f.fetchCNBalance(ctx, account, now)
 	default:
-		return f.fetchUsage(ctx, account, now)
+		return f.fetchUsage(ctx, account, now, forceProbe)
 	}
 }
 
 // fetchUsage 海外平台：AccountUsageService.GetUsageForAccount → 快照。
-func (f *ChannelMonitorQuotaFetcher) fetchUsage(ctx context.Context, account *Account, now time.Time) *domain.MonitorQuotaSnapshot {
+// forceProbe 透传给 GetUsageForAccount（跳过其内部缓存；国产配额/余额服务无缓存无需透传）。
+func (f *ChannelMonitorQuotaFetcher) fetchUsage(ctx context.Context, account *Account, now time.Time, forceProbe bool) *domain.MonitorQuotaSnapshot {
 	if f.usage == nil {
 		return quotaErrorSnapshot("usage", "usage service is not configured", now)
 	}
-	usage, err := f.usage.GetUsageForAccount(ctx, account)
+	usage, err := f.usage.GetUsageForAccount(ctx, account, forceProbe)
 	if err != nil {
 		msg := truncateMessage(sanitizeErrorMessage(err.Error()))
 		return &domain.MonitorQuotaSnapshot{

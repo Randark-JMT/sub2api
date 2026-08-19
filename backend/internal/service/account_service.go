@@ -173,33 +173,35 @@ type AccountBulkUpdate struct {
 
 // CreateAccountRequest 创建账号请求
 type CreateAccountRequest struct {
-	Name               string         `json:"name"`
-	Notes              *string        `json:"notes"`
-	Platform           string         `json:"platform"`
-	Type               string         `json:"type"`
-	Credentials        map[string]any `json:"credentials"`
-	Extra              map[string]any `json:"extra"`
-	ProxyID            *int64         `json:"proxy_id"`
-	Concurrency        int            `json:"concurrency"`
-	Priority           int            `json:"priority"`
-	GroupIDs           []int64        `json:"group_ids"`
-	ExpiresAt          *time.Time     `json:"expires_at"`
-	AutoPauseOnExpired *bool          `json:"auto_pause_on_expired"`
+	Name                  string         `json:"name"`
+	Notes                 *string        `json:"notes"`
+	Platform              string         `json:"platform"`
+	Type                  string         `json:"type"`
+	Credentials           map[string]any `json:"credentials"`
+	Extra                 map[string]any `json:"extra"`
+	ProxyID               *int64         `json:"proxy_id"`
+	Concurrency           int            `json:"concurrency"`
+	Priority              int            `json:"priority"`
+	GroupIDs              []int64        `json:"group_ids"`
+	ExpiresAt             *time.Time     `json:"expires_at"`
+	AutoPauseOnExpired    *bool          `json:"auto_pause_on_expired"`
+	WindowTrackingEnabled *bool          `json:"window_tracking_enabled"`
 }
 
 // UpdateAccountRequest 更新账号请求
 type UpdateAccountRequest struct {
-	Name               *string         `json:"name"`
-	Notes              *string         `json:"notes"`
-	Credentials        *map[string]any `json:"credentials"`
-	Extra              *map[string]any `json:"extra"`
-	ProxyID            *int64          `json:"proxy_id"`
-	Concurrency        *int            `json:"concurrency"`
-	Priority           *int            `json:"priority"`
-	Status             *string         `json:"status"`
-	GroupIDs           *[]int64        `json:"group_ids"`
-	ExpiresAt          *time.Time      `json:"expires_at"`
-	AutoPauseOnExpired *bool           `json:"auto_pause_on_expired"`
+	Name                  *string         `json:"name"`
+	Notes                 *string         `json:"notes"`
+	Credentials           *map[string]any `json:"credentials"`
+	Extra                 *map[string]any `json:"extra"`
+	ProxyID               *int64          `json:"proxy_id"`
+	Concurrency           *int            `json:"concurrency"`
+	Priority              *int            `json:"priority"`
+	Status                *string         `json:"status"`
+	GroupIDs              *[]int64        `json:"group_ids"`
+	ExpiresAt             *time.Time      `json:"expires_at"`
+	AutoPauseOnExpired    *bool           `json:"auto_pause_on_expired"`
+	WindowTrackingEnabled *bool           `json:"window_tracking_enabled"`
 }
 
 // AccountService 账号管理服务
@@ -247,6 +249,9 @@ func (s *AccountService) Create(ctx context.Context, req CreateAccountRequest) (
 		account.AutoPauseOnExpired = *req.AutoPauseOnExpired
 	} else {
 		account.AutoPauseOnExpired = true
+	}
+	if req.WindowTrackingEnabled != nil {
+		account.WindowTrackingEnabled = *req.WindowTrackingEnabled
 	}
 
 	if err := s.accountRepo.Create(ctx, account); err != nil {
@@ -364,6 +369,9 @@ func (s *AccountService) Update(ctx context.Context, id int64, req UpdateAccount
 	}
 	if req.AutoPauseOnExpired != nil {
 		account.AutoPauseOnExpired = *req.AutoPauseOnExpired
+	}
+	if req.WindowTrackingEnabled != nil {
+		account.WindowTrackingEnabled = *req.WindowTrackingEnabled
 	}
 
 	// 先验证分组是否存在（在任何写操作之前）

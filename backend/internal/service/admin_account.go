@@ -304,6 +304,8 @@ func (s *adminServiceImpl) DuplicateAccount(ctx context.Context, id int64, actor
 		GroupIDs:              groupIDs,
 		ExpiresAt:             expiresAt,
 		AutoPauseOnExpired:    &autoPauseOnExpired,
+		// WindowTrackingEnabled 刻意不复制：opt-in 且伴随上游 usage API 调用
+		// 成本，克隆账号默认不追踪，需要时管理员在编辑弹窗显式开启
 		SkipDefaultGroupBind:  true,
 		SkipMixedChannelCheck: true,
 	}
@@ -445,6 +447,9 @@ func buildAccountForCreate(input *CreateAccountInput, accountExtra map[string]an
 		account.AutoPauseOnExpired = *input.AutoPauseOnExpired
 	} else {
 		account.AutoPauseOnExpired = true
+	}
+	if input.WindowTrackingEnabled != nil {
+		account.WindowTrackingEnabled = *input.WindowTrackingEnabled
 	}
 	if input.RateMultiplier != nil {
 		if *input.RateMultiplier < 0 {
@@ -778,6 +783,9 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	}
 	if input.AutoPauseOnExpired != nil {
 		account.AutoPauseOnExpired = *input.AutoPauseOnExpired
+	}
+	if input.WindowTrackingEnabled != nil {
+		account.WindowTrackingEnabled = *input.WindowTrackingEnabled
 	}
 
 	// 先验证分组是否存在（在任何写操作之前）

@@ -55,9 +55,9 @@ func TestCNMillisToRFC3339(t *testing.T) {
 	t.Parallel()
 	// 1700000000 秒 = 1700000000000 毫秒
 	want := time.UnixMilli(1700000000000).UTC().Format(time.RFC3339)
-	require.Equal(t, want, cnMillisToRFC3339(1700000000))      // 秒级
-	require.Equal(t, want, cnMillisToRFC3339(1700000000000))   // 毫秒级
-	require.Equal(t, "", cnMillisToRFC3339(0))                 // 非正
+	require.Equal(t, want, cnMillisToRFC3339(1700000000))    // 秒级
+	require.Equal(t, want, cnMillisToRFC3339(1700000000000)) // 毫秒级
+	require.Equal(t, "", cnMillisToRFC3339(0))               // 非正
 	require.Equal(t, "", cnMillisToRFC3339(-1))
 }
 
@@ -294,8 +294,8 @@ func TestEvaluateAccountSchedulingThreshold_KimiCodingPlan(t *testing.T) {
 	account := &Account{
 		Platform: PlatformKimi,
 		Extra: map[string]any{
-			"kimi_5h_used_percent": 90.0,
-			"kimi_5h_reset_at":     reset.Format(time.RFC3339),
+			"kimi_5h_used_percent":     90.0,
+			"kimi_5h_reset_at":         reset.Format(time.RFC3339),
 			"kimi_weekly_used_percent": 30.0,
 			"kimi_weekly_reset_at":     now.Add(7 * 24 * time.Hour).Format(time.RFC3339),
 		},
@@ -410,9 +410,9 @@ func TestGetOpenAIProtocolAPIKey_CNProviders(t *testing.T) {
 	t.Parallel()
 
 	kimi := &Account{
-		Platform:     PlatformKimi,
-		Type:         AccountTypeAPIKey,
-		Credentials:  map[string]any{"api_key": "sk-kimi"},
+		Platform:    PlatformKimi,
+		Type:        AccountTypeAPIKey,
+		Credentials: map[string]any{"api_key": "sk-kimi"},
 	}
 	require.Equal(t, "sk-kimi", kimi.GetOpenAIProtocolAPIKey())
 	require.False(t, kimi.IsOpenAIApiKey(), "IsOpenAIApiKey stays openai-only for scheduling gates")

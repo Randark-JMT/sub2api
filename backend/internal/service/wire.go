@@ -514,6 +514,7 @@ func ProvideOpsAlertEvaluatorService(
 // ProvideOpsCleanupService creates and starts OpsCleanupService (cron scheduled).
 // channelMonitorSvc 让维护任务（聚合 + 历史/聚合软删）跟随 ops 清理 cron 一起跑，
 // 共享 leader lock + heartbeat。
+// windowUsageRecorder 让账号滚动窗口历史的保留期清理同样跟随 ops 清理 cron。
 // settingRepo 让 cleanup service 自己读 ops_advanced_settings.data_retention 覆盖 cfg；
 // opsService 用来反向注入 cleanup hook，以便 UI 改清理设置时能 Reload cron。
 func ProvideOpsCleanupService(
@@ -524,8 +525,9 @@ func ProvideOpsCleanupService(
 	channelMonitorSvc *ChannelMonitorService,
 	settingRepo SettingRepository,
 	opsService *OpsService,
+	windowUsageRecorder *AccountWindowUsageRecorder,
 ) *OpsCleanupService {
-	svc := NewOpsCleanupService(opsRepo, db, redisClient, cfg, channelMonitorSvc, settingRepo)
+	svc := NewOpsCleanupService(opsRepo, db, redisClient, cfg, channelMonitorSvc, settingRepo, windowUsageRecorder)
 	svc.Start()
 	if opsService != nil {
 		opsService.SetCleanupReloader(svc)
@@ -908,6 +910,8 @@ var ProviderSet = wire.NewSet(
 	ProvideChannelMonitorService,
 	ProvideChannelMonitorRunner,
 	NewChannelMonitorQuotaFetcher,
+	ProvideAccountWindowUsageRecorder,
+	NewAccountWindowUsageHistoryService,
 	ProvideChannelMonitorV2Service,
 	ProvideChannelMonitorV2Aggregator,
 	NewChannelMonitorRequestTemplateService,
@@ -981,6 +985,18 @@ func ProvideChannelMonitorRunner(
 		svc.SetScheduler(r)
 		svc.SetQuotaFetcher(quotaFetcher)
 	}
+	r.Start()
+	return r
+}
+
+// ProvideAccountWindowUsageRecorder 创建并启动账号滚动窗口用量记录器。
+// Stop 由 cmd/server 的 cleanup function 调用。
+func ProvideAccountWindowUsageRecorder(
+	windowRepo AccountWindowUsageRepository,
+	usageLogRepo UsageLogRepository,
+	quotaFetcher *ChannelMonitorQuotaFetcher,
+) *AccountWindowUsageRecorder {
+	r := NewAccountWindowUsageRecorder(windowRepo, usageLogRepo, quotaFetcher)
 	r.Start()
 	return r
 }

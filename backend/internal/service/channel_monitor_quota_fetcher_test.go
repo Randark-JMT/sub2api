@@ -27,6 +27,7 @@ type stubMonitorUsageSource struct {
 	calls       int
 	lastCtx     context.Context
 	lastAccount *Account
+	lastForce   bool
 }
 
 func (s *stubMonitorUsageSource) GetUsageForAccount(ctx context.Context, account *Account, force ...bool) (*UsageInfo, error) {
@@ -34,6 +35,7 @@ func (s *stubMonitorUsageSource) GetUsageForAccount(ctx context.Context, account
 	s.calls++
 	s.lastCtx = ctx
 	s.lastAccount = account
+	s.lastForce = len(force) > 0 && force[0]
 	s.mu.Unlock()
 	if s.block != nil {
 		<-s.block
@@ -51,6 +53,12 @@ func (s *stubMonitorUsageSource) getLastAccount() *Account {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.lastAccount
+}
+
+func (s *stubMonitorUsageSource) getLastForce() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lastForce
 }
 
 type stubMonitorCNQuotaSource struct {
@@ -562,6 +570,52 @@ func TestQuotaFetcher_ConcurrentFetchesShareSingleFlight(t *testing.T) {
 	// 成功快照已缓存：再取一次仍不打上游。
 	_ = fetcher.Fetch(context.Background(), 12)
 	require.Equal(t, 1, usage.getCalls())
+}
+
+// --- force 决断探测通道 ---
+
+func TestQuotaFetcher_ForceBypassesCacheAndRefills(t *testing.T) {
+	fetcher, usage, _, _, accounts := newQuotaFetcherTestSetup(t)
+	accounts.accounts[15] = &Account{ID: 15, Platform: domain.PlatformAnthropic}
+	usage.usage = &UsageInfo{FiveHour: &UsageProgress{Utilization: 10}}
+
+	// 第一次抓取进缓存。
+	_ = fetcher.Fetch(context.Background(), 15)
+	require.Equal(t, 1, usage.getCalls())
+
+	// force 绕过缓存重新打上游，且 force 语义透传给 AccountUsageService。
+	snapshot := fetcher.Fetch(context.Background(), 15, true)
+	require.True(t, snapshot.Success)
+	require.Equal(t, 2, usage.getCalls())
+	require.True(t, usage.getLastForce())
+
+	// force 结果回填缓存：随后的常规抓取直接命中，不再打上游。
+	_ = fetcher.Fetch(context.Background(), 15)
+	require.Equal(t, 2, usage.getCalls())
+}
+
+func TestQuotaFetcher_ForceOnCNPathStillQueriesAndCaches(t *testing.T) {
+	fetcher, _, cnQuota, _, accounts := newQuotaFetcherTestSetup(t)
+	accounts.accounts[16] = &Account{
+		ID:          16,
+		Platform:    domain.PlatformKimi,
+		Credentials: map[string]any{"account_mode": AccountModeCoding},
+	}
+	cnQuota.result = &CNProviderQuotaProbeResult{
+		Success:         true,
+		CredentialValid: true,
+		Tiers:           []CNQuotaTier{{Window: "5h", UsedPercent: 40}},
+	}
+
+	// 国产配额服务无缓存语义，force 只是绕过本层 TTL 缓存：照常查询并回填。
+	snapshot := fetcher.Fetch(context.Background(), 16, true)
+	require.True(t, snapshot.Success)
+	require.Equal(t, "cn_quota", snapshot.Source)
+	require.Len(t, snapshot.Tiers, 1)
+	require.Equal(t, 1, cnQuota.calls)
+
+	_ = fetcher.Fetch(context.Background(), 16)
+	require.Equal(t, 1, cnQuota.calls, "post-force result should be served from cache")
 }
 
 // --- UsageInfo → tiers 归一 ---
