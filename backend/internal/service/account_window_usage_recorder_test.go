@@ -666,7 +666,7 @@ func TestWindowHistoryService_GroupsByWindowTypeAndFlagsTracking(t *testing.T) {
 	windowRepo.finalized = []*AccountWindowUsageRecord{row}
 
 	svc := NewAccountWindowUsageHistoryService(windowRepo, stubWindowAccountRepo{stubOpenAIAccountRepo{accounts: []Account{
-		{ID: 7, WindowTrackingEnabled: true},
+		{ID: 7, Platform: domain.PlatformAnthropic, WindowTrackingEnabled: true},
 	}}})
 
 	resp, err := svc.GetWindowHistory(context.Background(), 7, 30)
